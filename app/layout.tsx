@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   title: 'Madrasah Academic System',
   description: 'Qur\'an memorization & subject grading',
   icons: {
-    icon: '/favicon.ico',
+    icon: '/favicon.png',
   },
 };
 

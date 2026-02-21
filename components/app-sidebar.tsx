@@ -66,22 +66,19 @@ function SidebarContent({
 }) {
   return (
     <div className={`flex h-full flex-col ${className ?? ''}`}>
-      {/* Logo / brand */}
-      <div className="shrink-0 px-5 py-5">
+      {/* Logo / brand - fitted to full width */}
+      <div className="shrink-0 px-2 py-3">
         <Link
           href="/"
           onClick={onLinkClick}
-          className="flex items-center gap-3 rounded-xl bg-primary/5 px-4 py-3 transition-colors hover:bg-primary/10"
+          className="block w-full rounded-xl bg-primary/5 transition-colors hover:bg-primary/10"
         >
-          <div className="relative flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-primary text-primary-foreground">
-            <Image src="/logo.png" alt="" width={40} height={40} className="object-contain p-1" />
-          </div>
-          <div>
-            <span className="font-arabic block text-xs text-muted-foreground" lang="ar">
-              المدرسة
-            </span>
-            <span className="font-semibold tracking-tight">Madrasah</span>
-          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/logo.png"
+            alt="Madrasah"
+            className="h-auto w-full object-contain object-center"
+          />
         </Link>
       </div>
 
@@ -133,11 +130,14 @@ export function AppSidebar({ user }: { user: { username?: string } | null }) {
         >
           <Menu className="size-5" />
         </button>
-        <Link href="/" className="flex items-center gap-2">
-          <div className="relative flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-primary text-primary-foreground">
-            <Image src="/logo.png" alt="" width={32} height={32} className="object-contain p-0.5" />
-          </div>
-          <span className="font-semibold">Madrasah</span>
+        <Link href="/" className="relative flex h-10 w-24 shrink-0" aria-label="Madrasah">
+          <Image
+            src="/logo.png"
+            alt="Madrasah"
+            fill
+            className="object-contain object-left"
+            sizes="96px"
+          />
         </Link>
         {user && (
           <span className="ml-auto truncate text-sm text-muted-foreground">{user.username}</span>
