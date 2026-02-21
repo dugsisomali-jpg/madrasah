@@ -5,7 +5,16 @@ import Link from 'next/link';
 import Swal from 'sweetalert2';
 import { Plus, Receipt, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Users, User, ExternalLink, CalendarRange, Loader2, UsersRound } from 'lucide-react';
 import { SearchableSelect } from '@/components/SearchableSelect';
-import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableHeader,
+  TableRow,
+  TableSkeleton,
+} from '@/components/ui/table';
 
 type Student = { id: string; name: string; fee?: number | string | null };
 type ReceiptRow = { id: string; amount: number | string; receiptNumber?: string | null; date: string; notes?: string | null };
@@ -537,38 +546,7 @@ export function PaymentsContent() {
       )}
 
       {loading ? (
-        <div className="overflow-x-auto rounded-lg border">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b bg-muted/50">
-                <th className="px-4 py-3 text-left font-medium">Student</th>
-                <th className="px-4 py-3 text-left font-medium">Period</th>
-                <th className="px-4 py-3 text-right font-medium">Fee</th>
-                <th className="px-4 py-3 text-right font-medium">Previous</th>
-                <th className="px-4 py-3 text-right font-medium">Total due</th>
-                <th className="px-4 py-3 text-right font-medium">Discount</th>
-                <th className="px-4 py-3 text-right font-medium">Paid</th>
-                <th className="px-4 py-3 text-right font-medium">Balance</th>
-                <th className="px-4 py-3 text-center font-medium">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {[...Array(8)].map((_, i) => (
-                <tr key={i} className="border-b">
-                  <td className="px-4 py-3"><Skeleton className="h-4 w-24" /></td>
-                  <td className="px-4 py-3"><Skeleton className="h-4 w-16" /></td>
-                  <td className="px-4 py-3 text-right"><Skeleton className="ml-auto h-4 w-20" /></td>
-                  <td className="px-4 py-3 text-right"><Skeleton className="ml-auto h-4 w-16" /></td>
-                  <td className="px-4 py-3 text-right"><Skeleton className="ml-auto h-4 w-20" /></td>
-                  <td className="px-4 py-3 text-right"><Skeleton className="ml-auto h-4 w-14" /></td>
-                  <td className="px-4 py-3 text-right"><Skeleton className="ml-auto h-4 w-20" /></td>
-                  <td className="px-4 py-3 text-right"><Skeleton className="ml-auto h-4 w-16" /></td>
-                  <td className="px-4 py-3"><Skeleton className="mx-auto h-8 w-24" /></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <TableSkeleton rows={8} cols={9} />
       ) : payments.length === 0 ? (
         <div className="rounded-xl border border-dashed bg-muted/20 py-16 text-center">
           <Receipt className="mx-auto h-12 w-12 text-muted-foreground/50" />
@@ -581,74 +559,76 @@ export function PaymentsContent() {
           )}
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-lg border">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b bg-muted/50">
-                <th className="px-4 py-3 text-left font-medium">Student</th>
-                <th className="px-4 py-3 text-left font-medium">Period</th>
-                <th className="px-4 py-3 text-right font-medium">Fee</th>
-                <th className="px-4 py-3 text-right font-medium">Previous</th>
-                <th className="px-4 py-3 text-right font-medium">Total due</th>
-                <th className="px-4 py-3 text-right font-medium">Discount</th>
-                <th className="px-4 py-3 text-right font-medium">Paid</th>
-                <th className="px-4 py-3 text-right font-medium">Balance</th>
-                <th className="px-4 py-3 text-center font-medium">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {payments.map((p) => {
-                const balance = n(p.totalDue) - n(p.discount) - n(p.amountPaid);
-                const hasCarriedOver = n(p.balanceCarriedOver) > 0;
-                return (
-                  <tr key={p.id} className="border-b hover:bg-muted/20">
-                    <td className="px-4 py-3 font-medium">{p.Student?.name ?? '—'}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{MONTHS[p.month - 1]} {p.year}</td>
-                    <td className="px-4 py-3 text-right">{n(p.feeAmount).toLocaleString()} KES</td>
-                    <td className="px-4 py-3 text-right">
-                      {hasCarriedOver ? (
-                        <span className="text-amber-600">{n(p.balanceCarriedOver).toLocaleString()} KES</span>
-                      ) : (
-                        '—'
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-right font-medium">{n(p.totalDue).toLocaleString()} KES</td>
-                    <td className="px-4 py-3 text-right text-muted-foreground">{n(p.discount).toLocaleString()} KES</td>
-                    <td className="px-4 py-3 text-right">{n(p.amountPaid).toLocaleString()} KES</td>
-                    <td className={`px-4 py-3 text-right font-medium ${balance > 0 ? 'text-destructive' : 'text-emerald-600'}`}>
-                      {balance.toLocaleString()} KES
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center justify-center gap-2">
-                        <Link
-                          href={`/payments/${p.id}`}
-                          className="inline-flex items-center gap-1 rounded-lg border px-2 py-1.5 text-xs font-medium hover:bg-muted"
-                        >
-                          <ExternalLink className="h-3.5 w-3.5" />
-                          Detail
-                        </Link>
-                        {canManage && balance > 0 && (
-                          p.canAddReceipt !== false ? (
-                            <button
-                              type="button"
-                              onClick={() => setReceiptModal(p)}
-                              className="inline-flex items-center gap-1 rounded-lg border border-emerald-600 px-2 py-1.5 text-xs font-medium text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
-                            >
-                              <Receipt className="h-3.5 w-3.5" />
-                              Add receipt
-                            </button>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">Balance carried to next month</span>
-                          )
+        <>
+          <TableContainer>
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className="whitespace-nowrap">Student</TableHead>
+                  <TableHead className="whitespace-nowrap">Period</TableHead>
+                  <TableHead className="text-right whitespace-nowrap">Fee</TableHead>
+                  <TableHead className="text-right whitespace-nowrap">Previous</TableHead>
+                  <TableHead className="text-right whitespace-nowrap">Total due</TableHead>
+                  <TableHead className="text-right whitespace-nowrap">Discount</TableHead>
+                  <TableHead className="text-right whitespace-nowrap">Paid</TableHead>
+                  <TableHead className="text-right whitespace-nowrap">Balance</TableHead>
+                  <TableHead className="text-center whitespace-nowrap">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {payments.map((p, i) => {
+                  const balance = n(p.totalDue) - n(p.discount) - n(p.amountPaid);
+                  const hasCarriedOver = n(p.balanceCarriedOver) > 0;
+                  return (
+                    <TableRow key={p.id} className={i % 2 === 1 ? 'bg-muted/5' : ''}>
+                      <TableCell className="font-medium">{p.Student?.name ?? '—'}</TableCell>
+                      <TableCell className="text-muted-foreground">{MONTHS[p.month - 1]} {p.year}</TableCell>
+                      <TableCell className="text-right">{n(p.feeAmount).toLocaleString()} KES</TableCell>
+                      <TableCell className="text-right">
+                        {hasCarriedOver ? (
+                          <span className="text-amber-600">{n(p.balanceCarriedOver).toLocaleString()} KES</span>
+                        ) : (
+                          '—'
                         )}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-          <div className="flex flex-col gap-4 border-t bg-muted/30 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                      </TableCell>
+                      <TableCell className="text-right font-medium">{n(p.totalDue).toLocaleString()} KES</TableCell>
+                      <TableCell className="text-right text-muted-foreground">{n(p.discount).toLocaleString()} KES</TableCell>
+                      <TableCell className="text-right">{n(p.amountPaid).toLocaleString()} KES</TableCell>
+                      <TableCell className={`text-right font-medium ${balance > 0 ? 'text-destructive' : 'text-emerald-600'}`}>
+                        {balance.toLocaleString()} KES
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center justify-center gap-2">
+                          <Link
+                            href={`/payments/${p.id}`}
+                            className="inline-flex items-center gap-1 rounded-lg border px-2 py-1.5 text-xs font-medium hover:bg-muted"
+                          >
+                            <ExternalLink className="h-3.5 w-3.5" />
+                            Detail
+                          </Link>
+                          {canManage && balance > 0 && (
+                            p.canAddReceipt !== false ? (
+                              <button
+                                type="button"
+                                onClick={() => setReceiptModal(p)}
+                                className="inline-flex items-center gap-1 rounded-lg border border-emerald-600 px-2 py-1.5 text-xs font-medium text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
+                              >
+                                <Receipt className="h-3.5 w-3.5" />
+                                Add receipt
+                              </button>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">Balance carried to next month</span>
+                            )
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </TableContainer>
+          <div className="flex flex-col gap-4 rounded-b-2xl border border-t-0 border-border bg-muted/30 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex flex-wrap items-center gap-4">
               <div className="flex items-center gap-2">
                 <span className="text-sm text-muted-foreground">Per page</span>
@@ -693,7 +673,7 @@ export function PaymentsContent() {
               </button>
             </div>
           </div>
-        </div>
+        </>
       )}
 
       {modalOpen && (

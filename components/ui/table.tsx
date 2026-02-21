@@ -1,6 +1,7 @@
 import * as React from "react"
 
 import { cn } from "@/lib/utils"
+import { Skeleton } from "@/components/ui/skeleton"
 
 const Table = React.forwardRef<
   HTMLTableElement,
@@ -20,7 +21,7 @@ const TableHeader = React.forwardRef<
   HTMLTableSectionElement,
   React.HTMLAttributes<HTMLTableSectionElement>
 >(({ className, ...props }, ref) => (
-  <thead ref={ref} className={cn("[&_tr]:border-b", className)} {...props} />
+  <thead ref={ref} className={cn("[&_tr]:border-b [&_tr]:border-border", className)} {...props} />
 ))
 TableHeader.displayName = "TableHeader"
 
@@ -43,7 +44,7 @@ const TableFooter = React.forwardRef<
   <tfoot
     ref={ref}
     className={cn(
-      "border-t bg-muted/50 font-medium [&>tr]:last:border-b-0",
+      "border-t border-border bg-muted/50 font-medium [&>tr]:last:border-b-0",
       className
     )}
     {...props}
@@ -58,7 +59,7 @@ const TableRow = React.forwardRef<
   <tr
     ref={ref}
     className={cn(
-      "border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted",
+      "border-b border-border transition-colors hover:bg-muted/30 data-[state=selected]:bg-muted",
       className
     )}
     {...props}
@@ -73,7 +74,7 @@ const TableHead = React.forwardRef<
   <th
     ref={ref}
     className={cn(
-      "h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
+      "h-12 px-6 text-left align-middle font-semibold text-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
       className
     )}
     {...props}
@@ -88,7 +89,7 @@ const TableCell = React.forwardRef<
   <td
     ref={ref}
     className={cn(
-      "p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
+      "px-6 py-4 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
       className
     )}
     {...props}
@@ -108,6 +109,62 @@ const TableCaption = React.forwardRef<
 ))
 TableCaption.displayName = "TableCaption"
 
+/** Card-style wrapper for tables: rounded-2xl, border, shadow */
+function TableContainer({
+  className,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div
+      className={cn(
+        "overflow-hidden rounded-2xl border border-border bg-card shadow-sm",
+        className
+      )}
+      {...props}
+    />
+  )
+}
+
+/** Skeleton table with configurable rows and columns */
+function TableSkeleton({
+  rows = 5,
+  cols = 5,
+  className,
+}: {
+  rows?: number;
+  cols?: number;
+  className?: string;
+}) {
+  return (
+    <div className={cn("overflow-hidden rounded-2xl border border-border bg-card shadow-sm", className)}>
+      <div className="overflow-x-auto">
+        <table className="w-full table-fixed border-collapse text-sm">
+          <thead>
+            <tr className="border-b border-border bg-muted/40">
+              {Array.from({ length: cols }).map((_, i) => (
+                <th key={i} className="h-12 px-6 text-left">
+                  <Skeleton className="h-4 w-20" />
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {Array.from({ length: rows }).map((_, rowIdx) => (
+              <tr key={rowIdx} className="border-b border-border">
+                {Array.from({ length: cols }).map((_, colIdx) => (
+                  <td key={colIdx} className="px-6 py-4">
+                    <Skeleton className="h-4 w-full max-w-[120px]" />
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
 export {
   Table,
   TableHeader,
@@ -117,4 +174,6 @@ export {
   TableRow,
   TableCell,
   TableCaption,
+  TableContainer,
+  TableSkeleton,
 }

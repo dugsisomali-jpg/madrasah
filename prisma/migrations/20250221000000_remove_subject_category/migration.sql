@@ -1,0 +1,1 @@
+ALTER TABLE "Subject" DROP COLUMN IF EXISTS "category";

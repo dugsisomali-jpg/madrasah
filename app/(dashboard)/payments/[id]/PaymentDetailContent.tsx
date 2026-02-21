@@ -4,6 +4,16 @@ import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Swal from 'sweetalert2';
 import { ArrowLeft, Plus, Receipt, Printer, FileDown } from 'lucide-react';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableHeader,
+  TableRow,
+  TableSkeleton,
+} from '@/components/ui/table';
 
 type Student = { id: string; name: string; fee?: number | string | null };
 type ReceiptRow = { id: string; amount: number | string; receiptNumber?: string | null; date: string; notes?: string | null };
@@ -390,7 +400,14 @@ export function PaymentDetailContent({ paymentId }: { paymentId: string }) {
           <ArrowLeft className="h-4 w-4" />
           Back to payments
         </Link>
-        <p className="text-muted-foreground">{loading ? 'Loading…' : 'Payment not found.'}</p>
+        {loading ? (
+          <>
+            <div className="h-32 animate-pulse rounded-2xl bg-muted" />
+            <TableSkeleton rows={4} cols={4} />
+          </>
+        ) : (
+          <p className="text-muted-foreground">Payment not found.</p>
+        )}
       </div>
     );
   }
@@ -470,36 +487,38 @@ export function PaymentDetailContent({ paymentId }: { paymentId: string }) {
         {!payment.receipts || payment.receipts.length === 0 ? (
           <p className="mt-4 text-sm text-muted-foreground">No receipts yet.</p>
         ) : (
-          <div className="mt-4 overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b">
-                  <th className="px-4 py-2 text-left font-medium">Receipt #</th>
-                  <th className="px-4 py-2 text-left font-medium">Date</th>
-                  <th className="px-4 py-2 text-right font-medium">Amount</th>
-                  <th className="px-4 py-2 text-center font-medium">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {payment.receipts.map((r) => (
-                  <tr key={r.id} className="border-b">
-                    <td className="px-4 py-2">{r.receiptNumber || '—'}</td>
-                    <td className="px-4 py-2">{typeof r.date === 'string' ? r.date.slice(0, 10) : r.date}</td>
-                    <td className="px-4 py-2 text-right">{n(r.amount).toLocaleString()} KES</td>
-                    <td className="px-4 py-2">
-                      <button
-                        type="button"
-                        onClick={() => setReceiptModal(r)}
-                        className="inline-flex items-center gap-1 rounded border px-2 py-1 text-xs hover:bg-muted"
-                      >
-                        <Receipt className="h-3 w-3" />
-                        Print / PDF
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="mt-4">
+            <TableContainer>
+              <Table>
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead className="whitespace-nowrap">Receipt #</TableHead>
+                    <TableHead className="whitespace-nowrap">Date</TableHead>
+                    <TableHead className="text-right whitespace-nowrap">Amount</TableHead>
+                    <TableHead className="text-center whitespace-nowrap">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {payment.receipts.map((r, i) => (
+                    <TableRow key={r.id} className={i % 2 === 1 ? 'bg-muted/5' : ''}>
+                      <TableCell>{r.receiptNumber || '—'}</TableCell>
+                      <TableCell className="whitespace-nowrap">{typeof r.date === 'string' ? r.date.slice(0, 10) : r.date}</TableCell>
+                      <TableCell className="text-right">{n(r.amount).toLocaleString()} KES</TableCell>
+                      <TableCell>
+                        <button
+                          type="button"
+                          onClick={() => setReceiptModal(r)}
+                          className="inline-flex items-center gap-1 rounded-lg border border-input px-2 py-1.5 text-xs font-medium hover:bg-muted"
+                        >
+                          <Receipt className="h-3 w-3" />
+                          Print / PDF
+                        </button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
           </div>
         )}
       </div>

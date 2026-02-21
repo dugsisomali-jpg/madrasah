@@ -8,10 +8,10 @@ import bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 const subjects = [
-  { id: 'subj-quran', name: 'Qur\'an Memorization (Hifz)', category: 'QURAN', description: 'Memorization of the Holy Qur\'an' },
-  { id: 'subj-tajweed', name: 'Tajweed', category: 'TAJWEED', description: 'Rules of Qur\'an recitation' },
-  { id: 'subj-islamic', name: 'Islamic Studies', category: 'ISLAMIC_STUDIES', description: 'Fiqh, Hadith, Seerah, Aqeedah' },
-  { id: 'subj-arabic', name: 'Arabic', category: 'ARABIC', description: 'Arabic language and grammar' },
+  { id: 'subj-quran', name: 'Qur\'an Memorization (Hifz)', description: 'Memorization of the Holy Qur\'an' },
+  { id: 'subj-tajweed', name: 'Tajweed', description: 'Rules of Qur\'an recitation' },
+  { id: 'subj-islamic', name: 'Islamic Studies', description: 'Fiqh, Hadith, Seerah, Aqeedah' },
+  { id: 'subj-arabic', name: 'Arabic', description: 'Arabic language and grammar' },
 ];
 
 async function main() {

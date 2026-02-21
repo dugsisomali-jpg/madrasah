@@ -2,6 +2,15 @@
 
 import { useEffect, useState } from 'react';
 import { KeyRound } from 'lucide-react';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 
 type Permission = { id: string; name: string; resource: string; action: string; description?: string };
 
@@ -137,37 +146,39 @@ export function PermissionsContent() {
       </div>
 
       {/* Permissions table */}
-      <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
-        <div className="flex items-center gap-3 border-b bg-muted/30 px-6 py-4">
+      <div className="space-y-0">
+        <div className="flex items-center gap-3 px-1 pb-3">
           <KeyRound className="h-5 w-5 text-muted-foreground" />
           <h3 className="font-semibold">Permissions</h3>
         </div>
         {permissions.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b bg-muted/20">
-                  <th className="h-11 px-6 text-left font-medium">Name</th>
-                  <th className="h-11 px-6 text-left font-medium">Resource</th>
-                  <th className="h-11 px-6 text-left font-medium">Action</th>
-                  <th className="h-11 px-6 text-left font-medium text-muted-foreground">Description</th>
-                </tr>
-              </thead>
-              <tbody>
-                {permissions.map((p) => (
-                  <tr key={p.id} className="border-b transition-colors hover:bg-muted/20">
-                    <td className="px-6 py-4 font-medium">{p.name}</td>
-                    <td className="px-6 py-4">{p.resource}</td>
-                    <td className="px-6 py-4">{p.action}</td>
-                    <td className="px-6 py-4 text-muted-foreground">{p.description ?? '—'}</td>
-                  </tr>
+          <TableContainer>
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className="whitespace-nowrap">Name</TableHead>
+                  <TableHead className="whitespace-nowrap">Resource</TableHead>
+                  <TableHead className="whitespace-nowrap">Action</TableHead>
+                  <TableHead className="text-muted-foreground">Description</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {permissions.map((p, i) => (
+                  <TableRow key={p.id} className={i % 2 === 1 ? 'bg-muted/5' : ''}>
+                    <TableCell className="font-medium">{p.name}</TableCell>
+                    <TableCell>{p.resource}</TableCell>
+                    <TableCell>{p.action}</TableCell>
+                    <TableCell className="text-muted-foreground">{p.description ?? '—'}</TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
-          </div>
+              </TableBody>
+            </Table>
+          </TableContainer>
         ) : (
-          <div className="py-12 text-center text-muted-foreground">
-            No permissions yet. Run <code className="rounded bg-muted px-1.5 py-0.5 text-xs">npm run db:seed:roles</code>
+          <div className="flex min-h-[200px] items-center justify-center rounded-2xl border border-dashed border-muted-foreground/25 bg-muted/20 py-12 text-center">
+            <p className="text-sm text-muted-foreground">
+              No permissions yet. Run <code className="rounded bg-muted px-1.5 py-0.5 text-xs">npm run db:seed:roles</code>
+            </p>
           </div>
         )}
       </div>

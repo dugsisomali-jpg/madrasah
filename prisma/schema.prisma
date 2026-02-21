@@ -137,7 +137,7 @@ model Receipt {
 model Subject {
   id          String       @id
   name        String
-  category    String
+  nameAr      String?
   description String?
   ExamResult  ExamResult[]
 }

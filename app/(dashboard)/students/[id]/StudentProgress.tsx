@@ -1,6 +1,16 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableHeader,
+  TableRow,
+  TableSkeleton,
+} from '@/components/ui/table';
 
 type Record = {
   id: string;
@@ -34,7 +44,17 @@ export function StudentProgress({ studentId }: { studentId: string }) {
       .finally(() => setLoading(false));
   }, [studentId]);
 
-  if (loading) return <p className="text-muted-foreground">Loading…</p>;
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="h-24 animate-pulse rounded-xl bg-muted" />
+          <div className="h-24 animate-pulse rounded-xl bg-muted" />
+        </div>
+        <TableSkeleton rows={6} cols={7} />
+      </div>
+    );
+  }
   if (!progress) return <p className="text-muted-foreground">Failed to load progress.</p>;
 
   return (
@@ -55,36 +75,38 @@ export function StudentProgress({ studentId }: { studentId: string }) {
           <p className="text-sm text-muted-foreground">Daily tracking, teacher feedback, revision records</p>
         </div>
         {progress.recentRecords.length === 0 ? (
-          <p className="text-muted-foreground py-4">No records yet.</p>
+          <p className="py-4 text-muted-foreground">No records yet.</p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full caption-bottom text-sm">
-              <thead>
-                <tr className="border-b transition-colors hover:bg-muted/50">
-                  <th className="h-10 px-4 text-left align-middle font-medium">Date</th>
-                  <th className="h-10 px-4 text-left align-middle font-medium">Type</th>
-                  <th className="h-10 px-4 text-left align-middle font-medium">Surah</th>
-                  <th className="h-10 px-4 text-left align-middle font-medium">Ayah</th>
-                  <th className="h-10 px-4 text-left align-middle font-medium">Rating</th>
-                  <th className="h-10 px-4 text-left align-middle font-medium">Notes</th>
-                  <th className="h-10 px-4 text-left align-middle font-medium">Teacher</th>
-                </tr>
-              </thead>
-              <tbody>
-                {progress.recentRecords.map((r) => (
-                  <tr key={r.id} className="border-b transition-colors hover:bg-muted/50">
-                    <td className="p-4 align-middle">{r.date?.slice(0, 10)}</td>
-                    <td className="p-4 align-middle">{r.memorizationType}</td>
-                    <td className="p-4 align-middle">{r.surahNumber}</td>
-                    <td className="p-4 align-middle">{r.ayahStart}–{r.ayahEnd}</td>
-                    <td className="p-4 align-middle">{r.rating ?? '—'}</td>
-                    <td className="p-4 align-middle max-w-[200px] truncate" title={r.notes ?? ''}>{r.notes ?? '—'}</td>
-                    <td className="p-4 align-middle">{r.Teacher?.name ?? r.teacher?.name}</td>
-                  </tr>
+          <TableContainer>
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className="whitespace-nowrap">Date</TableHead>
+                  <TableHead className="whitespace-nowrap">Type</TableHead>
+                  <TableHead className="whitespace-nowrap">Surah</TableHead>
+                  <TableHead className="whitespace-nowrap">Ayah</TableHead>
+                  <TableHead className="whitespace-nowrap">Rating</TableHead>
+                  <TableHead className="max-w-[200px]">Notes</TableHead>
+                  <TableHead className="whitespace-nowrap">Teacher</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {progress.recentRecords.map((r, i) => (
+                  <TableRow key={r.id} className={i % 2 === 1 ? 'bg-muted/5' : ''}>
+                    <TableCell className="whitespace-nowrap">{r.date?.slice(0, 10)}</TableCell>
+                    <TableCell>{r.memorizationType}</TableCell>
+                    <TableCell>{r.surahNumber}</TableCell>
+                    <TableCell className="whitespace-nowrap">{r.ayahStart}–{r.ayahEnd}</TableCell>
+                    <TableCell>{r.rating ?? '—'}</TableCell>
+                    <TableCell className="max-w-[200px] truncate text-muted-foreground" title={r.notes ?? ''}>
+                      {r.notes ?? '—'}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">{r.Teacher?.name ?? r.teacher?.name}</TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
-          </div>
+              </TableBody>
+            </Table>
+          </TableContainer>
         )}
       </div>
     </div>

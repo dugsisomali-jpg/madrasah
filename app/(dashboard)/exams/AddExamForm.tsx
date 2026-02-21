@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useI18n } from '@/lib/i18n';
 
 type Student = { id: string; name: string };
-type Subject = { id: string; name: string };
+type Subject = { id: string; name: string; nameAr?: string | null };
 
 const EXAM_TYPES = ['TERM_EXAM', 'MID_TERM', 'FINAL', 'QUIZ'] as const;
 
@@ -86,7 +87,9 @@ export function AddExamForm({ onSuccess, onCancel }: { onSuccess?: () => void; o
           <select value={subjectId} onChange={(e) => setSubjectId(e.target.value)} required className={selectCls}>
             <option value="">Select subject</option>
             {subjects.map((s) => (
-              <option key={s.id} value={s.id}>{s.name}</option>
+              <option key={s.id} value={s.id}>
+                {locale === 'ar' && s.nameAr?.trim() ? s.nameAr.trim() : s.name}
+              </option>
             ))}
           </select>
         </div>

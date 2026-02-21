@@ -1,6 +1,16 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableHeader,
+  TableRow,
+  TableSkeleton,
+} from '@/components/ui/table';
 
 type ExamResult = {
   id: string;
@@ -30,44 +40,42 @@ export function StudentExamsSection({ studentId }: { studentId: string }) {
     load();
   }, [studentId]);
 
-  if (loading) return <p className="text-muted-foreground">Loading exams…</p>;
-
   return (
     <div className="rounded-xl border bg-card p-6">
       <h3 className="mb-4 font-semibold">Exam results</h3>
-      {exams.length === 0 ? (
-        <p className="text-muted-foreground">No exam results yet.</p>
+      {loading ? (
+        <TableSkeleton rows={5} cols={6} />
+      ) : exams.length === 0 ? (
+        <p className="py-6 text-muted-foreground">No exam results yet.</p>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b">
-                <th className="h-10 px-4 text-left font-medium">Date</th>
-                <th className="h-10 px-4 text-left font-medium">Subject</th>
-                <th className="h-10 px-4 text-left font-medium">Type</th>
-                <th className="h-10 px-4 text-left font-medium">Term</th>
-                <th className="h-10 px-4 text-left font-medium">Marks</th>
-                <th className="h-10 px-4 text-left font-medium">Report</th>
-              </tr>
-            </thead>
-            <tbody>
-              {exams.map((e) => (
-                <tr key={e.id} className="border-b hover:bg-muted/50">
-                  <td className="p-4">{e.date?.slice(0, 10)}</td>
-                  <td className="p-4">{e.Subject?.name ?? '—'}</td>
-                  <td className="p-4">{e.examType?.replace(/_/g, ' ')}</td>
-                  <td className="p-4">{e.term}</td>
-                  <td className="p-4">
-                    {e.marks} / {e.maxMarks}
-                  </td>
-                  <td className="max-w-[200px] truncate p-4" title={e.report ?? ''}>
+        <TableContainer>
+          <Table>
+            <TableHeader>
+              <TableRow className="hover:bg-transparent">
+                <TableHead className="whitespace-nowrap">Date</TableHead>
+                <TableHead className="whitespace-nowrap">Subject</TableHead>
+                <TableHead className="whitespace-nowrap">Type</TableHead>
+                <TableHead className="whitespace-nowrap">Term</TableHead>
+                <TableHead className="whitespace-nowrap">Marks</TableHead>
+                <TableHead className="max-w-[200px]">Report</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {exams.map((e, i) => (
+                <TableRow key={e.id} className={i % 2 === 1 ? 'bg-muted/5' : ''}>
+                  <TableCell className="whitespace-nowrap">{e.date?.slice(0, 10)}</TableCell>
+                  <TableCell>{e.Subject?.name ?? '—'}</TableCell>
+                  <TableCell>{e.examType?.replace(/_/g, ' ')}</TableCell>
+                  <TableCell>{e.term}</TableCell>
+                  <TableCell className="whitespace-nowrap">{e.marks} / {e.maxMarks}</TableCell>
+                  <TableCell className="max-w-[200px] truncate text-muted-foreground" title={e.report ?? ''}>
                     {e.report ?? '—'}
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
-        </div>
+            </TableBody>
+          </Table>
+        </TableContainer>
       )}
     </div>
   );

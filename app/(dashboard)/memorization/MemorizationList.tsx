@@ -1,6 +1,16 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableHeader,
+  TableRow,
+  TableSkeleton,
+} from '@/components/ui/table';
 
 type Record = {
   id: string;
@@ -17,7 +27,8 @@ type Record = {
   teacher?: { name: string };
 };
 
-const btnCls = 'inline-flex h-8 items-center justify-center rounded-md border border-input bg-background px-3 text-xs font-medium shadow-sm hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50';
+const btnCls =
+  'inline-flex h-9 items-center justify-center rounded-xl border border-input bg-background px-4 text-sm font-medium shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50';
 
 export function MemorizationList() {
   const [records, setRecords] = useState<Record[]>([]);
@@ -37,43 +48,61 @@ export function MemorizationList() {
       .finally(() => setLoading(false));
   }, [page]);
 
-  if (loading) return <p className="text-muted-foreground">Loading…</p>;
-  if (records.length === 0) return <p className="text-muted-foreground">No memorization records yet.</p>;
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <TableSkeleton rows={8} cols={8} />
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="h-9 w-24 animate-pulse rounded-xl bg-muted" />
+          <span className="text-sm text-muted-foreground">Page 1 of 1</span>
+          <div className="h-9 w-16 animate-pulse rounded-xl bg-muted" />
+        </div>
+      </div>
+    );
+  }
+
+  if (records.length === 0) {
+    return (
+      <div className="flex min-h-[280px] items-center justify-center rounded-2xl border border-dashed border-muted-foreground/25 bg-muted/20">
+        <p className="text-sm text-muted-foreground">No memorization records yet.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
-      <div className="rounded-xl border bg-card text-card-foreground shadow overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full caption-bottom text-sm">
-            <thead>
-              <tr className="border-b transition-colors hover:bg-muted/50">
-                <th className="h-10 px-4 text-left align-middle font-medium whitespace-nowrap">Date</th>
-                <th className="h-10 px-4 text-left align-middle font-medium whitespace-nowrap">Student</th>
-                <th className="h-10 px-4 text-left align-middle font-medium whitespace-nowrap">Type</th>
-                <th className="h-10 px-4 text-left align-middle font-medium whitespace-nowrap">Surah</th>
-                <th className="h-10 px-4 text-left align-middle font-medium whitespace-nowrap">Ayah</th>
-                <th className="h-10 px-4 text-left align-middle font-medium whitespace-nowrap">Rating</th>
-                <th className="h-10 px-4 text-left align-middle font-medium whitespace-nowrap">Notes</th>
-                <th className="h-10 px-4 text-left align-middle font-medium whitespace-nowrap">Teacher</th>
-              </tr>
-            </thead>
-            <tbody>
-              {records.map((r) => (
-                <tr key={r.id} className="border-b transition-colors hover:bg-muted/50">
-                  <td className="p-4 align-middle whitespace-nowrap">{r.date?.slice(0, 10)}</td>
-                  <td className="p-4 align-middle">{r.Student?.name ?? r.student?.name}</td>
-                  <td className="p-4 align-middle whitespace-nowrap">{r.memorizationType}</td>
-                  <td className="p-4 align-middle">{r.surahNumber}</td>
-                  <td className="p-4 align-middle whitespace-nowrap">{r.ayahStart}–{r.ayahEnd}</td>
-                  <td className="p-4 align-middle">{r.rating ?? '—'}</td>
-                  <td className="p-4 align-middle max-w-[150px] truncate" title={r.notes ?? ''}>{r.notes ?? '—'}</td>
-                  <td className="p-4 align-middle">{r.Teacher?.name ?? r.teacher?.name}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <TableContainer>
+        <Table>
+          <TableHeader>
+            <TableRow className="hover:bg-transparent">
+              <TableHead className="whitespace-nowrap">Date</TableHead>
+              <TableHead className="whitespace-nowrap">Student</TableHead>
+              <TableHead className="whitespace-nowrap">Type</TableHead>
+              <TableHead className="whitespace-nowrap">Surah</TableHead>
+              <TableHead className="whitespace-nowrap">Ayah</TableHead>
+              <TableHead className="whitespace-nowrap">Rating</TableHead>
+              <TableHead className="max-w-[150px]">Notes</TableHead>
+              <TableHead className="whitespace-nowrap">Teacher</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {records.map((r, i) => (
+              <TableRow key={r.id} className={i % 2 === 1 ? 'bg-muted/5' : ''}>
+                <TableCell className="whitespace-nowrap font-medium">{r.date?.slice(0, 10)}</TableCell>
+                <TableCell>{r.Student?.name ?? r.student?.name}</TableCell>
+                <TableCell className="whitespace-nowrap">{r.memorizationType}</TableCell>
+                <TableCell>{r.surahNumber}</TableCell>
+                <TableCell className="whitespace-nowrap">{r.ayahStart}–{r.ayahEnd}</TableCell>
+                <TableCell>{r.rating ?? '—'}</TableCell>
+                <TableCell className="max-w-[150px] truncate text-muted-foreground" title={r.notes ?? ''}>
+                  {r.notes ?? '—'}
+                </TableCell>
+                <TableCell className="text-muted-foreground">{r.Teacher?.name ?? r.teacher?.name}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
       <div className="flex flex-wrap items-center gap-4">
         <button
           type="button"

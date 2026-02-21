@@ -3,6 +3,16 @@
 import { useEffect, useState } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { SearchableSelect } from '@/components/SearchableSelect';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableHeader,
+  TableRow,
+  TableSkeleton,
+} from '@/components/ui/table';
 
 type ExamResult = {
   id: string;
@@ -156,38 +166,38 @@ export function ExamsList() {
       )}
 
       {loading ? (
-        <p className="text-muted-foreground">Loading…</p>
+        <TableSkeleton rows={10} cols={6} />
       ) : exams.length === 0 ? (
-        <p className="text-muted-foreground">No exam results yet.</p>
-      ) : (
-        <div className="overflow-hidden rounded-xl border bg-card text-card-foreground shadow">
-          <div className="overflow-x-auto">
-            <table className="w-full caption-bottom text-sm">
-              <thead>
-                <tr className="border-b transition-colors hover:bg-muted/50">
-                  <th className="h-10 px-4 text-left align-middle font-medium whitespace-nowrap">Student</th>
-                  <th className="h-10 px-4 text-left align-middle font-medium whitespace-nowrap">Date</th>
-                  <th className="h-10 px-4 text-left align-middle font-medium whitespace-nowrap">Subject</th>
-                  <th className="h-10 px-4 text-left align-middle font-medium whitespace-nowrap">Type</th>
-                  <th className="h-10 px-4 text-left align-middle font-medium whitespace-nowrap">Term</th>
-                  <th className="h-10 px-4 text-left align-middle font-medium whitespace-nowrap">Marks</th>
-                </tr>
-              </thead>
-              <tbody>
-                {exams.map((e) => (
-                  <tr key={e.id} className="border-b transition-colors hover:bg-muted/50">
-                    <td className="p-4 align-middle font-medium">{e.Student?.name ?? '—'}</td>
-                    <td className="p-4 align-middle whitespace-nowrap">{e.date?.slice(0, 10)}</td>
-                    <td className="p-4 align-middle">{e.Subject?.name ?? '—'}</td>
-                    <td className="p-4 align-middle whitespace-nowrap">{e.examType?.replace(/_/g, ' ')}</td>
-                    <td className="p-4 align-middle">{e.term}</td>
-                    <td className="p-4 align-middle whitespace-nowrap">{e.marks} / {e.maxMarks}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+        <div className="flex min-h-[280px] items-center justify-center rounded-2xl border border-dashed border-muted-foreground/25 bg-muted/20">
+          <p className="text-sm text-muted-foreground">No exam results yet.</p>
         </div>
+      ) : (
+        <TableContainer>
+          <Table>
+            <TableHeader>
+              <TableRow className="hover:bg-transparent">
+                <TableHead className="whitespace-nowrap">Student</TableHead>
+                <TableHead className="whitespace-nowrap">Date</TableHead>
+                <TableHead className="whitespace-nowrap">Subject</TableHead>
+                <TableHead className="whitespace-nowrap">Type</TableHead>
+                <TableHead className="whitespace-nowrap">Term</TableHead>
+                <TableHead className="whitespace-nowrap">Marks</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {exams.map((e, i) => (
+                <TableRow key={e.id} className={i % 2 === 1 ? 'bg-muted/5' : ''}>
+                  <TableCell className="font-medium">{e.Student?.name ?? '—'}</TableCell>
+                  <TableCell className="whitespace-nowrap">{e.date?.slice(0, 10)}</TableCell>
+                  <TableCell>{e.Subject?.name ?? '—'}</TableCell>
+                  <TableCell className="whitespace-nowrap">{e.examType?.replace(/_/g, ' ')}</TableCell>
+                  <TableCell>{e.term}</TableCell>
+                  <TableCell className="whitespace-nowrap">{e.marks} / {e.maxMarks}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
       )}
     </div>
   );

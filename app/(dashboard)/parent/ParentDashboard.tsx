@@ -4,6 +4,16 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { BookOpen, FileCheck, Banknote } from 'lucide-react';
 import { Image, ImageKitProvider } from '@imagekit/next';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableHeader,
+  TableRow,
+  TableSkeleton,
+} from '@/components/ui/table';
 
 type Child = {
   id: string;
@@ -191,7 +201,7 @@ export function ParentDashboard() {
               )}
             </div>
             {!data ? (
-              <p className="text-sm text-muted-foreground">Loading…</p>
+              <TableSkeleton rows={6} cols={5} />
             ) : (
               <Tabs defaultValue="memorization" className="w-full">
                 <TabsList className="grid h-12 w-full grid-cols-3 gap-1 rounded-lg bg-muted p-1">
@@ -212,96 +222,98 @@ export function ParentDashboard() {
                   {data.memo.length === 0 ? (
                     <p className="py-6 text-center text-sm text-muted-foreground">No records yet.</p>
                   ) : (
-                    <div className="overflow-x-auto rounded-lg border bg-background">
-                      <table className="w-full min-w-[320px] text-sm">
-                        <thead>
-                          <tr className="border-b bg-muted/50">
-                            <th className="px-3 py-2.5 text-left font-medium">Date</th>
-                            <th className="px-3 py-2.5 text-left font-medium">Type</th>
-                            <th className="px-3 py-2.5 text-left font-medium">Surah</th>
-                            <th className="px-3 py-2.5 text-left font-medium">Ayah</th>
-                            <th className="px-3 py-2.5 text-left font-medium">Rating</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {data.memo.slice(0, 20).map((r) => (
-                            <tr key={r.id} className="border-b">
-                              <td className="px-3 py-2.5">{r.date?.slice?.(0, 10) ?? r.date}</td>
-                              <td className="px-3 py-2.5">{r.memorizationType}</td>
-                              <td className="px-3 py-2.5">{r.surahNumber}</td>
-                              <td className="px-3 py-2.5">{r.ayahStart}–{r.ayahEnd}</td>
-                              <td className="px-3 py-2.5">{r.rating ?? '—'}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                    <>
+                      <TableContainer>
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="hover:bg-transparent">
+                              <TableHead className="whitespace-nowrap">Date</TableHead>
+                              <TableHead className="whitespace-nowrap">Type</TableHead>
+                              <TableHead className="whitespace-nowrap">Surah</TableHead>
+                              <TableHead className="whitespace-nowrap">Ayah</TableHead>
+                              <TableHead className="whitespace-nowrap">Rating</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {data.memo.slice(0, 20).map((r, i) => (
+                              <TableRow key={r.id} className={i % 2 === 1 ? 'bg-muted/5' : ''}>
+                                <TableCell className="whitespace-nowrap">{r.date?.slice?.(0, 10) ?? r.date}</TableCell>
+                                <TableCell>{r.memorizationType}</TableCell>
+                                <TableCell>{r.surahNumber}</TableCell>
+                                <TableCell className="whitespace-nowrap">{r.ayahStart}–{r.ayahEnd}</TableCell>
+                                <TableCell>{r.rating ?? '—'}</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </TableContainer>
                       {data.memo.length > 20 && (
-                        <p className="px-3 py-2 text-xs text-muted-foreground">
+                        <p className="mt-2 px-2 text-xs text-muted-foreground">
                           Showing 20 of {data.memo.length} records
                         </p>
                       )}
-                    </div>
+                    </>
                   )}
                 </TabsContent>
                 <TabsContent value="exams" className="mt-3 focus-visible:outline-none">
                   {data.exams.length === 0 ? (
                     <p className="py-6 text-center text-sm text-muted-foreground">No results yet.</p>
                   ) : (
-                    <div className="overflow-x-auto rounded-lg border bg-background">
-                      <table className="w-full min-w-[280px] text-sm">
-                        <thead>
-                          <tr className="border-b bg-muted/50">
-                            <th className="px-3 py-2.5 text-left font-medium">Date</th>
-                            <th className="px-3 py-2.5 text-left font-medium">Subject</th>
-                            <th className="px-3 py-2.5 text-left font-medium">Type</th>
-                            <th className="px-3 py-2.5 text-left font-medium">Marks</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {data.exams.map((e) => (
-                            <tr key={e.id} className="border-b">
-                              <td className="px-3 py-2.5">{e.date?.slice?.(0, 10)}</td>
-                              <td className="px-3 py-2.5">{e.Subject?.name ?? '—'}</td>
-                              <td className="px-3 py-2.5">{e.examType?.replace(/_/g, ' ')}</td>
-                              <td className="px-3 py-2.5">{e.marks} / {e.maxMarks}</td>
-                            </tr>
+                    <TableContainer>
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="hover:bg-transparent">
+                            <TableHead className="whitespace-nowrap">Date</TableHead>
+                            <TableHead className="whitespace-nowrap">Subject</TableHead>
+                            <TableHead className="whitespace-nowrap">Type</TableHead>
+                            <TableHead className="whitespace-nowrap">Marks</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {data.exams.map((e, i) => (
+                            <TableRow key={e.id} className={i % 2 === 1 ? 'bg-muted/5' : ''}>
+                              <TableCell className="whitespace-nowrap">{e.date?.slice?.(0, 10)}</TableCell>
+                              <TableCell>{e.Subject?.name ?? '—'}</TableCell>
+                              <TableCell>{e.examType?.replace(/_/g, ' ')}</TableCell>
+                              <TableCell className="whitespace-nowrap">{e.marks} / {e.maxMarks}</TableCell>
+                            </TableRow>
                           ))}
-                        </tbody>
-                      </table>
-                    </div>
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
                   )}
                 </TabsContent>
                 <TabsContent value="payments" className="mt-3 focus-visible:outline-none">
                   {data.payments.length === 0 ? (
                     <p className="py-6 text-center text-sm text-muted-foreground">No payments yet.</p>
                   ) : (
-                    <div className="overflow-x-auto rounded-lg border bg-background">
-                      <table className="w-full min-w-[280px] text-sm">
-                        <thead>
-                          <tr className="border-b bg-muted/50">
-                            <th className="px-3 py-2.5 text-left font-medium">Period</th>
-                            <th className="px-3 py-2.5 text-right font-medium">Total due</th>
-                            <th className="px-3 py-2.5 text-right font-medium">Paid</th>
-                            <th className="px-3 py-2.5 text-right font-medium">Balance</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {data.payments.map((p) => {
+                    <TableContainer>
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="hover:bg-transparent">
+                            <TableHead className="whitespace-nowrap">Period</TableHead>
+                            <TableHead className="text-right whitespace-nowrap">Total due</TableHead>
+                            <TableHead className="text-right whitespace-nowrap">Paid</TableHead>
+                            <TableHead className="text-right whitespace-nowrap">Balance</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {data.payments.map((p, i) => {
                             const balance = n(p.totalDue) - n(p.discount) - n(p.amountPaid);
                             return (
-                              <tr key={p.id} className="border-b">
-                                <td className="px-3 py-2.5">{MONTHS[p.month - 1]} {p.year}</td>
-                                <td className="px-3 py-2.5 text-right">{n(p.totalDue).toLocaleString()} KES</td>
-                                <td className="px-3 py-2.5 text-right">{n(p.amountPaid).toLocaleString()} KES</td>
-                                <td className={`px-3 py-2.5 text-right ${balance > 0 ? 'text-destructive font-medium' : ''}`}>
+                              <TableRow key={p.id} className={i % 2 === 1 ? 'bg-muted/5' : ''}>
+                                <TableCell>{MONTHS[p.month - 1]} {p.year}</TableCell>
+                                <TableCell className="text-right">{n(p.totalDue).toLocaleString()} KES</TableCell>
+                                <TableCell className="text-right">{n(p.amountPaid).toLocaleString()} KES</TableCell>
+                                <TableCell className={`text-right font-medium ${balance > 0 ? 'text-destructive' : ''}`}>
                                   {balance.toLocaleString()} KES
-                                </td>
-                              </tr>
+                                </TableCell>
+                              </TableRow>
                             );
                           })}
-                        </tbody>
-                      </table>
-                    </div>
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
                   )}
                 </TabsContent>
               </Tabs>

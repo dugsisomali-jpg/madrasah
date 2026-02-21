@@ -92,8 +92,9 @@ function LoginForm() {
 export default function LoginPage() {
   return (
     <Suspense fallback={
-      <div className="flex min-h-screen items-center justify-center p-4">
-        <div className="w-full max-w-md rounded-xl border bg-card text-card-foreground shadow p-6 animate-pulse h-80" />
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background">
+        <img src="/favicon.png" alt="" className="h-16 w-16 animate-pulse object-contain" />
+        <p className="text-sm text-muted-foreground">Loading…</p>
       </div>
     }>
       <LoginForm />
