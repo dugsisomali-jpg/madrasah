@@ -34,8 +34,15 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const { id } = await params;
   try {
     const data = updateSchema.parse(await req.json());
-    const { roleIds, permissionIds, password, ...rest } = data;
+    const { roleIds, permissionIds, password, username: newUsername, ...rest } = data;
     const updateData: Record<string, unknown> = { ...rest };
+    if (newUsername !== undefined) {
+      const existing = await prisma.user.findUnique({ where: { username: newUsername } });
+      if (existing && existing.id !== id) {
+        return NextResponse.json({ error: 'Username already in use' }, { status: 400 });
+      }
+      updateData.username = newUsername;
+    }
     if (password) {
       updateData.passwordHash = await bcrypt.hash(password, 10);
     }

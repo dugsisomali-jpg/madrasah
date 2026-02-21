@@ -17,25 +17,23 @@ import {
   BookMarked,
 } from 'lucide-react';
 import { signOut } from 'next-auth/react';
-import { useI18n } from '@/lib/i18n';
 
-const navItems: { href: string; labelKey: string; icon: React.ComponentType<{ className?: string }> }[] = [
-  { href: '/', labelKey: 'nav.dashboard', icon: LayoutDashboard },
-  { href: '/memorization', labelKey: 'nav.memorization', icon: BookOpen },
-  { href: '/students', labelKey: 'nav.students', icon: Users },
-  { href: '/teachers', labelKey: 'nav.teachers', icon: GraduationCap },
-  { href: '/payments', labelKey: 'nav.payments', icon: Banknote },
-  { href: '/exams', labelKey: 'nav.exams', icon: FileCheck },
-  { href: '/subjects', labelKey: 'nav.subjects', icon: BookMarked },
-  { href: '/user-management', labelKey: 'nav.userManagement', icon: Shield },
+const navItems: { href: string; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+  { href: '/', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/memorization', label: 'Memorization', icon: BookOpen },
+  { href: '/students', label: 'Students', icon: Users },
+  { href: '/teachers', label: 'Teachers', icon: GraduationCap },
+  { href: '/payments', label: 'Payments', icon: Banknote },
+  { href: '/exams', label: 'Exams', icon: FileCheck },
+  { href: '/subjects', label: 'Subjects', icon: BookMarked },
+  { href: '/user-management', label: 'User Management', icon: Shield },
 ];
 
 function NavLinks({ onLinkClick }: { onLinkClick?: () => void }) {
   const pathname = usePathname();
-  const { t } = useI18n();
   return (
     <nav className="flex flex-col gap-1">
-      {navItems.map(({ href, labelKey, icon: Icon }) => {
+      {navItems.map(({ href, label, icon: Icon }) => {
         const isActive = pathname === href;
         return (
           <Link
@@ -51,7 +49,7 @@ function NavLinks({ onLinkClick }: { onLinkClick?: () => void }) {
             <Icon
               className={`size-5 shrink-0 transition-transform ${isActive ? '' : 'group-hover:scale-105'}`}
             />
-            {t(labelKey)}
+            {label}
           </Link>
         );
       })}
@@ -68,7 +66,6 @@ function SidebarContent({
   onLinkClick?: () => void;
   user?: { username?: string } | null;
 }) {
-  const { t } = useI18n();
   return (
     <div className={`flex h-full flex-col ${className ?? ''}`}>
       {/* Logo / brand - fitted to full width */}
@@ -90,7 +87,7 @@ function SidebarContent({
       {/* Nav */}
       <div className="flex-1 overflow-auto px-4 pb-4">
         <p className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          {t('nav.menu')}
+          Menu
         </p>
         <NavLinks onLinkClick={onLinkClick} />
       </div>
@@ -99,7 +96,7 @@ function SidebarContent({
       <div className="shrink-0 space-y-1 border-t border-border/60 p-4">
         {user?.username && (
           <div className="rounded-lg bg-muted/50 px-3 py-2">
-            <p className="text-xs text-muted-foreground">{t('nav.signedInAs')}</p>
+            <p className="text-xs text-muted-foreground">Signed in as</p>
             <p className="truncate text-sm font-medium">{user.username}</p>
           </div>
         )}
@@ -109,7 +106,7 @@ function SidebarContent({
           className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground transition-all hover:bg-destructive/10 hover:text-destructive"
         >
           <LogOut className="size-4 shrink-0" />
-          {t('nav.signOut')}
+          Sign out
         </button>
       </div>
     </div>

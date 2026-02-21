@@ -10,6 +10,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  TableSkeleton,
 } from '@/components/ui/table';
 
 type Permission = { id: string; name: string; resource: string; action: string; description?: string };
@@ -18,9 +19,9 @@ const RESOURCES = ['users', 'roles', 'permissions', 'memorization', 'students', 
 const ACTIONS = ['manage', 'read', 'create', 'update', 'delete'];
 
 const inputCls =
-  'flex h-9 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
+  'flex h-10 w-full rounded-xl border border-input bg-background px-4 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2';
 const selectCls =
-  'flex h-9 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
+  'flex h-10 w-full rounded-xl border border-input bg-background px-4 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2';
 
 export function PermissionsContent() {
   const [permissions, setPermissions] = useState<Permission[]>([]);
@@ -29,9 +30,15 @@ export function PermissionsContent() {
   const [action, setAction] = useState('');
   const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);
+  const [permissionsLoading, setPermissionsLoading] = useState(true);
 
   const load = () => {
-    fetch('/api/permissions').then((r) => r.json()).then(setPermissions).catch(() => setPermissions([]));
+    setPermissionsLoading(true);
+    fetch('/api/permissions')
+      .then((r) => r.json())
+      .then((data) => setPermissions(Array.isArray(data) ? data : []))
+      .catch(() => setPermissions([]))
+      .finally(() => setPermissionsLoading(false));
   };
 
   useEffect(() => {
@@ -63,17 +70,19 @@ export function PermissionsContent() {
   };
 
   const btnPrimary =
-    'inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50';
+    'inline-flex h-11 items-center justify-center rounded-xl bg-slate-700 px-5 text-sm font-medium text-white shadow-md hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 dark:bg-slate-600 dark:hover:bg-slate-700';
 
   return (
     <div className="space-y-8">
       {/* Add permission */}
-      <div className="rounded-xl border bg-card p-6 shadow-sm">
-        <h3 className="font-semibold">Add permission</h3>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Define fine-grained permissions (resource.action) that can be assigned to roles or users directly.
-        </p>
-        <form onSubmit={handleCreate} className="mt-4 grid gap-4 sm:grid-cols-2">
+      <div className="overflow-hidden rounded-2xl border border-slate-200/60 bg-card shadow-sm dark:border-slate-700/50">
+        <div className="border-b border-slate-200/60 bg-slate-50/80 px-6 py-4 dark:border-slate-700/50 dark:bg-slate-800/30">
+          <h3 className="font-semibold text-slate-900 dark:text-slate-100">Add permission</h3>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Define fine-grained permissions (resource.action) for roles or users.
+          </p>
+        </div>
+        <form onSubmit={handleCreate} className="grid gap-4 p-6 sm:grid-cols-2">
           <div>
             <label htmlFor="permName" className="mb-1.5 block text-sm font-medium">
               Name
@@ -146,13 +155,16 @@ export function PermissionsContent() {
       </div>
 
       {/* Permissions table */}
-      <div className="space-y-0">
-        <div className="flex items-center gap-3 px-1 pb-3">
-          <KeyRound className="h-5 w-5 text-muted-foreground" />
-          <h3 className="font-semibold">Permissions</h3>
+      <div className="overflow-hidden rounded-2xl border border-slate-200/60 bg-card shadow-sm dark:border-slate-700/50">
+        <div className="flex items-center gap-3 border-b border-slate-200/60 bg-slate-50/80 px-6 py-4 dark:border-slate-700/50 dark:bg-slate-800/30">
+          <KeyRound className="h-5 w-5 text-slate-600 dark:text-slate-400" />
+          <h3 className="font-semibold text-slate-900 dark:text-slate-100">Permissions</h3>
         </div>
-        {permissions.length > 0 ? (
-          <TableContainer>
+        <div className="p-4">
+        {permissionsLoading ? (
+          <TableSkeleton rows={8} cols={4} />
+        ) : permissions.length > 0 ? (
+          <TableContainer className="border border-slate-200/60 rounded-xl dark:border-slate-700/50">
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
@@ -175,12 +187,13 @@ export function PermissionsContent() {
             </Table>
           </TableContainer>
         ) : (
-          <div className="flex min-h-[200px] items-center justify-center rounded-2xl border border-dashed border-muted-foreground/25 bg-muted/20 py-12 text-center">
+          <div className="flex min-h-[200px] items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-slate-50/50 py-12 text-center dark:border-slate-700 dark:bg-slate-800/20">
             <p className="text-sm text-muted-foreground">
-              No permissions yet. Run <code className="rounded bg-muted px-1.5 py-0.5 text-xs">npm run db:seed:roles</code>
+              No permissions yet. Run <code className="rounded-lg bg-slate-100 px-2 py-1 text-xs dark:bg-slate-800">npm run db:seed:roles</code>
             </p>
           </div>
         )}
+        </div>
       </div>
     </div>
   );

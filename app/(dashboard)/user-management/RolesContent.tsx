@@ -7,10 +7,10 @@ type Role = { id: string; name: string; description?: string; permissions: { id:
 type Permission = { id: string; name: string; resource: string; action: string };
 
 const inputCls =
-  'flex h-9 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
+  'flex h-10 w-full rounded-xl border border-input bg-background px-4 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2';
 const btnBase =
-  'inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50';
-const btnPrimary = `${btnBase} bg-primary text-primary-foreground shadow-sm hover:bg-primary/90`;
+  'inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50';
+const btnPrimary = `${btnBase} bg-slate-700 text-white shadow-md hover:bg-slate-800 dark:bg-slate-600 dark:hover:bg-slate-700`;
 const btnSecondary = `${btnBase} border border-input bg-background hover:bg-accent hover:text-accent-foreground`;
 
 export function RolesContent() {
@@ -19,12 +19,19 @@ export function RolesContent() {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);
+  const [rolesLoading, setRolesLoading] = useState(true);
   const [editing, setEditing] = useState<string | null>(null);
   const [editPermIds, setEditPermIds] = useState<Set<string>>(new Set());
 
   const load = () => {
-    fetch('/api/roles').then((r) => r.json()).then(setRoles).catch(() => setRoles([]));
-    fetch('/api/permissions').then((r) => r.json()).then(setPermissions).catch(() => setPermissions([]));
+    setRolesLoading(true);
+    Promise.all([
+      fetch('/api/roles').then((r) => r.json()).then((data) => (Array.isArray(data) ? data : [])).catch(() => []),
+      fetch('/api/permissions').then((r) => r.json()).then((data) => (Array.isArray(data) ? data : [])).catch(() => []),
+    ]).then(([rolesData, permsData]) => {
+      setRoles(rolesData);
+      setPermissions(permsData);
+    }).finally(() => setRolesLoading(false));
   };
 
   useEffect(() => {
@@ -83,12 +90,14 @@ export function RolesContent() {
   return (
     <div className="space-y-8">
       {/* Add role */}
-      <div className="rounded-xl border bg-card p-6 shadow-sm">
-        <h3 className="font-semibold">Add role</h3>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Roles bundle permissions together for easier assignment.
-        </p>
-        <form onSubmit={handleCreate} className="mt-4 flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end">
+      <div className="overflow-hidden rounded-2xl border border-slate-200/60 bg-card shadow-sm dark:border-slate-700/50">
+        <div className="border-b border-slate-200/60 bg-slate-50/80 px-6 py-4 dark:border-slate-700/50 dark:bg-slate-800/30">
+          <h3 className="font-semibold text-slate-900 dark:text-slate-100">Add role</h3>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Roles bundle permissions together for easier assignment.
+          </p>
+        </div>
+        <form onSubmit={handleCreate} className="flex flex-col gap-4 p-6 sm:flex-row sm:flex-wrap sm:items-end">
           <div className="space-y-2 sm:min-w-[160px]">
             <label htmlFor="roleName" className="block text-sm font-medium">
               Name
@@ -114,24 +123,24 @@ export function RolesContent() {
               className={inputCls}
             />
           </div>
-          <button type="submit" disabled={loading} className={btnPrimary}>
+          <button type="submit" disabled={loading} className={`h-11 rounded-xl px-5 ${btnPrimary}`}>
             Add role
           </button>
         </form>
       </div>
 
       {/* Roles list */}
-      <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
-        <div className="flex items-center gap-3 border-b bg-muted/30 px-6 py-4">
-          <Shield className="h-5 w-5 text-muted-foreground" />
-          <h3 className="font-semibold">Roles</h3>
+      <div className="overflow-hidden rounded-2xl border border-slate-200/60 bg-card shadow-sm dark:border-slate-700/50">
+        <div className="flex items-center gap-3 border-b border-slate-200/60 bg-slate-50/80 px-6 py-4 dark:border-slate-700/50 dark:bg-slate-800/30">
+          <Shield className="h-5 w-5 text-slate-600 dark:text-slate-400" />
+          <h3 className="font-semibold text-slate-900 dark:text-slate-100">Roles</h3>
         </div>
-        <div className="divide-y">
+        <div className="divide-y divide-slate-100 dark:divide-slate-800">
           {roles.map((r) => (
-            <div key={r.id} className="px-6 py-4">
+            <div key={r.id} className="px-6 py-4 transition-colors hover:bg-slate-50/50 dark:hover:bg-slate-800/20">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <span className="font-medium">{r.name}</span>
+                  <span className="font-medium text-slate-900 dark:text-slate-100">{r.name}</span>
                   {r.description && (
                     <span className="ml-2 text-sm text-muted-foreground">— {r.description}</span>
                   )}
@@ -140,17 +149,17 @@ export function RolesContent() {
                   type="button"
                   onClick={() => handleAssignPermissions(r.id)}
                   disabled={loading}
-                  className={btnSecondary + ' text-xs h-8 px-3'}
+                  className={`rounded-xl text-xs h-9 px-3 ${btnSecondary}`}
                 >
                   {editing === r.id ? 'Save' : 'Edit permissions'}
                 </button>
               </div>
               {editing === r.id ? (
-                <div className="mt-4 flex flex-wrap gap-2 rounded-lg border border-input bg-muted/30 p-3">
+                <div className="mt-4 flex flex-wrap gap-2 rounded-xl border border-slate-200 bg-slate-50/50 p-3 dark:border-slate-700 dark:bg-slate-800/30">
                   {permissions.map((p) => (
                     <label
                       key={p.id}
-                      className="flex cursor-pointer items-center gap-2 rounded-md bg-background px-2.5 py-1.5 text-sm transition-colors hover:bg-accent/50 has-[:checked]:bg-primary/10"
+                      className="flex cursor-pointer items-center gap-2 rounded-lg bg-background px-2.5 py-1.5 text-sm transition-colors hover:bg-slate-100 dark:hover:bg-slate-700/50 has-[:checked]:bg-slate-200 has-[:checked]:text-slate-900 dark:has-[:checked]:bg-slate-600 dark:has-[:checked]:text-slate-100"
                     >
                       <input
                         type="checkbox"
@@ -172,7 +181,7 @@ export function RolesContent() {
                     r.permissions.map((p) => (
                       <span
                         key={p.id}
-                        className="inline-flex items-center gap-1 rounded-md bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary"
+                        className="inline-flex items-center gap-1 rounded-lg bg-slate-200/80 px-2 py-0.5 text-xs font-medium text-slate-800 dark:bg-slate-600/60 dark:text-slate-200"
                       >
                         <KeyRound className="h-3 w-3" />
                         {p.name}
@@ -185,9 +194,9 @@ export function RolesContent() {
               )}
             </div>
           ))}
-          {roles.length === 0 && (
+          {!rolesLoading && roles.length === 0 && (
             <div className="py-12 text-center text-muted-foreground">
-              No roles yet. Run <code className="rounded bg-muted px-1.5 py-0.5 text-xs">npm run db:seed:roles</code>
+              No roles yet. Run <code className="rounded-lg bg-slate-100 px-2 py-1 text-xs dark:bg-slate-800">npm run db:seed:roles</code>
             </div>
           )}
         </div>

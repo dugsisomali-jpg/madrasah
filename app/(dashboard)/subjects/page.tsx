@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useI18n } from '@/lib/i18n';
 import { BookOpen, Plus, Pencil, Trash2, X } from 'lucide-react';
 import {
   Table,
@@ -35,7 +34,6 @@ const btnDanger =
   'inline-flex items-center justify-center gap-2 rounded-xl bg-destructive px-5 py-2.5 text-sm font-medium text-destructive-foreground shadow-sm transition-colors hover:bg-destructive/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50';
 
 export default function SubjectsPage() {
-  const { t, locale } = useI18n();
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -126,8 +124,6 @@ export default function SubjectsPage() {
       .finally(() => setSubmitLoading(false));
   };
 
-  const displayName = (s: Subject) => (locale === 'ar' && s.nameAr?.trim() ? s.nameAr.trim() : s.name);
-
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -137,13 +133,13 @@ export default function SubjectsPage() {
             <span className="flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
               <BookOpen className="size-6" />
             </span>
-            {t('subjects.title')}
+            Subjects
           </h1>
-          <p className="mt-1.5 text-sm text-muted-foreground">{t('subjects.description')}</p>
+          <p className="mt-1.5 text-sm text-muted-foreground">Manage subjects for exams and grading.</p>
         </div>
         <button type="button" onClick={openCreate} className={btnPrimary}>
           <Plus className="size-4" />
-          {t('subjects.create')}
+          Create subject
         </button>
       </div>
 
@@ -156,12 +152,12 @@ export default function SubjectsPage() {
             <BookOpen className="size-10 text-muted-foreground" />
           </div>
           <div className="space-y-1">
-            <p className="text-base font-medium text-foreground">{t('subjects.noSubjects')}</p>
+            <p className="text-base font-medium text-foreground">No subjects yet</p>
             <p className="text-sm text-muted-foreground">Create your first subject to use in exams.</p>
           </div>
           <button type="button" onClick={openCreate} className={btnPrimary}>
             <Plus className="size-4" />
-            {t('subjects.create')}
+            Create subject
           </button>
         </div>
       ) : (
@@ -169,9 +165,9 @@ export default function SubjectsPage() {
           <Table>
             <TableHeader>
               <TableRow className="hover:bg-transparent">
-                <TableHead>{t('subjects.name')}</TableHead>
-                <TableHead>{t('subjects.nameAr')}</TableHead>
-                <TableHead className="max-w-[200px]">{t('subjects.descriptionLabel')}</TableHead>
+                <TableHead>Name</TableHead>
+                <TableHead>Arabic name (optional)</TableHead>
+                <TableHead className="max-w-[200px]">Description</TableHead>
                 <TableHead className="w-24 text-right">
                   <span className="sr-only">Actions</span>
                 </TableHead>
@@ -191,7 +187,7 @@ export default function SubjectsPage() {
                         type="button"
                         onClick={() => openEdit(s)}
                         className={btnGhost}
-                        title={t('common.edit')}
+                        title="Edit"
                       >
                         <Pencil className="size-4" />
                       </button>
@@ -199,7 +195,7 @@ export default function SubjectsPage() {
                         type="button"
                         onClick={() => setDeleteConfirm(s)}
                         className={`${btnGhost} hover:bg-destructive/10 hover:text-destructive`}
-                        title={t('common.delete')}
+                        title="Delete"
                       >
                         <Trash2 className="size-4" />
                       </button>
@@ -228,13 +224,13 @@ export default function SubjectsPage() {
           >
             <div className="mb-6 flex items-center justify-between">
               <h2 id="subject-modal-title" className="text-xl font-semibold">
-                {editing ? t('subjects.edit') : t('subjects.create')}
+                {editing ? 'Edit subject' : 'Create subject'}
               </h2>
               <button
                 type="button"
                 onClick={() => !submitLoading && setModalOpen(false)}
                 className={btnGhost}
-                aria-label={t('common.close')}
+                aria-label="Close"
               >
                 <X className="size-5" />
               </button>
@@ -242,7 +238,7 @@ export default function SubjectsPage() {
             <form onSubmit={handleSubmit} className="space-y-5">
               <div className="grid gap-5 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">{t('subjects.name')}</label>
+                  <label className="text-sm font-medium">Name</label>
                   <input
                     type="text"
                     value={name}
@@ -253,7 +249,7 @@ export default function SubjectsPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">{t('subjects.nameAr')}</label>
+                  <label className="text-sm font-medium">Arabic name (optional)</label>
                   <input
                     type="text"
                     value={nameAr}
@@ -265,7 +261,7 @@ export default function SubjectsPage() {
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">{t('subjects.descriptionLabel')}</label>
+                <label className="text-sm font-medium">Description</label>
                 <textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
@@ -279,14 +275,14 @@ export default function SubjectsPage() {
               )}
               <div className="flex flex-wrap gap-3 pt-2">
                 <button type="submit" disabled={submitLoading} className={btnPrimary}>
-                  {submitLoading ? t('common.loading') : t('common.save')}
+                  {submitLoading ? 'Loading…' : 'Save'}
                 </button>
                 <button
                   type="button"
                   onClick={() => !submitLoading && setModalOpen(false)}
                   className={btnSecondary}
                 >
-                  {t('common.cancel')}
+                  Cancel
                 </button>
               </div>
             </form>
@@ -309,9 +305,9 @@ export default function SubjectsPage() {
             aria-labelledby="delete-title"
           >
             <h2 id="delete-title" className="text-lg font-semibold text-foreground">
-              {t('common.delete')}: {displayName(deleteConfirm)}
+              Delete: {deleteConfirm.name}
             </h2>
-            <p className="mt-2 text-sm text-muted-foreground">{t('subjects.deleteConfirm')}</p>
+            <p className="mt-2 text-sm text-muted-foreground">Delete this subject? Exam results linked to it will keep the subject name but the subject will be removed from the list.</p>
             {error && (
               <p className="mt-3 rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</p>
             )}
@@ -322,7 +318,7 @@ export default function SubjectsPage() {
                 disabled={submitLoading}
                 className={btnDanger}
               >
-                {submitLoading ? t('common.loading') : t('common.delete')}
+                {submitLoading ? 'Loading…' : 'Delete'}
               </button>
               <button
                 type="button"
@@ -333,7 +329,7 @@ export default function SubjectsPage() {
                 disabled={submitLoading}
                 className={btnSecondary}
               >
-                {t('common.cancel')}
+                Cancel
               </button>
             </div>
           </div>
