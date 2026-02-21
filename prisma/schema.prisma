@@ -1,0 +1,174 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                    String                 @id @default(cuid())
+  username              String                 @unique
+  passwordHash          String
+  name                  String?
+  createdAt             DateTime               @default(now())
+  roles                 Role[]                 @relation("UserRole")
+  directPermissions     Permission[]           @relation("UserPermission")
+  children              Student[]              @relation("StudentParent")
+  studentsTaught        Student[]              @relation("StudentTeacher")
+  memorizationRecorded  memorization_records[] @relation("MemorizationTeacher")
+}
+
+model Role {
+  id          String       @id @default(cuid())
+  name        String       @unique
+  description String?
+  createdAt   DateTime     @default(now())
+  users       User[]       @relation("UserRole")
+  permissions Permission[] @relation("RolePermission")
+}
+
+model Permission {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  resource    String   // e.g. "users", "memorization", "exams"
+  action      String   // e.g. "create", "read", "update", "delete", "manage"
+  description String?
+  createdAt   DateTime @default(now())
+  roles       Role[]   @relation("RolePermission")
+  directUsers User[]   @relation("UserPermission")
+}
+
+model ExamResult {
+  id        String   @id
+  studentId String
+  subjectId String
+  examType  ExamType
+  term      String
+  marks     Decimal  @db.Decimal(5, 2)
+  maxMarks  Decimal  @db.Decimal(5, 2)
+  report    String?
+  date      DateTime @db.Date
+  Student   Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  Subject   Subject  @relation(fields: [subjectId], references: [id])
+
+  @@index([date])
+  @@index([studentId])
+  @@index([subjectId])
+}
+
+model Student {
+  id                   String                 @id @default(cuid())
+  name                 String
+  motherName           String?
+  motherPhone          String?
+  parentId             String?
+  teacherId            String?
+  dateOfBirth          DateTime?              @db.Date
+  address              String?
+  imagePath            String?
+  fee                  Decimal?               @db.Decimal(10, 2)
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+  parent               User?                  @relation("StudentParent", fields: [parentId], references: [id], onDelete: SetNull)
+  teacher              User?                  @relation("StudentTeacher", fields: [teacherId], references: [id], onDelete: SetNull)
+  ExamResult           ExamResult[]
+  memorization_records memorization_records[]
+  Payment              Payment[]
+  ReceiptBatch         ReceiptBatch[]
+}
+
+model Payment {
+  id                 String    @id @default(cuid())
+  studentId          String
+  month              Int       // 1-12
+  year               Int
+  feeAmount          Decimal   @db.Decimal(10, 2) // Base fee for this month (e.g. 5000)
+  balanceCarriedOver Decimal   @db.Decimal(10, 2) @default(0) // From previous month (e.g. 3000)
+  totalDue           Decimal   @db.Decimal(10, 2) // feeAmount + balanceCarriedOver
+  discount           Decimal   @db.Decimal(10, 2) @default(0) // Amount waived (reduces amount due)
+  amountPaid         Decimal   @db.Decimal(10, 2) @default(0) // Sum of receipts
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  Student            Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  receipts           Receipt[]
+
+  @@unique([studentId, month, year])
+  @@index([studentId])
+  @@index([year, month])
+}
+
+model ReceiptBatch {
+  id            String   @id @default(cuid())
+  studentId     String
+  totalAmount   Decimal  @db.Decimal(10, 2)
+  receiptNumber String?
+  date          DateTime @db.Date
+  notes         String?
+  fromMonth     Int      // 1-12
+  fromYear      Int
+  toMonth       Int      // 1-12
+  toYear        Int
+  createdAt     DateTime @default(now())
+  Student       Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  receipts      Receipt[]
+
+  @@index([studentId])
+  @@index([date])
+}
+
+model Receipt {
+  id             String        @id @default(cuid())
+  paymentId      String
+  receiptBatchId String?
+  amount         Decimal       @db.Decimal(10, 2)
+  receiptNumber  String?
+  date           DateTime      @db.Date
+  notes          String?
+  createdAt      DateTime      @default(now())
+  Payment        Payment       @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  ReceiptBatch   ReceiptBatch? @relation(fields: [receiptBatchId], references: [id], onDelete: SetNull)
+
+  @@index([paymentId])
+  @@index([receiptBatchId])
+}
+
+model Subject {
+  id          String       @id
+  name        String
+  category    String
+  description String?
+  ExamResult  ExamResult[]
+}
+
+model memorization_records {
+  id               String           @id @default(cuid())
+  studentId        String
+  teacherId        String
+  surahNumber      Int
+  ayahStart        Int
+  ayahEnd          Int
+  memorizationType MemorizationType
+  rating           Int?
+  notes            String?
+  date             DateTime         @db.Date
+  Student          Student          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  Teacher          User             @relation("MemorizationTeacher", fields: [teacherId], references: [id], onDelete: Cascade)
+
+  @@index([date])
+  @@index([studentId, date])
+  @@index([teacherId, date])
+}
+
+enum ExamType {
+  TERM_EXAM
+  MID_TERM
+  FINAL
+  QUIZ
+}
+
+enum MemorizationType {
+  SABAQ
+  MURAJAA
+}
