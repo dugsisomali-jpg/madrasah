@@ -5,6 +5,9 @@ import './globals.css';
 export const metadata: Metadata = {
   title: 'Madrasah Academic System',
   description: 'Qur\'an memorization & subject grading',
+  icons: {
+    icon: '/favicon.ico',
+  },
 };
 
 export default function RootLayout({

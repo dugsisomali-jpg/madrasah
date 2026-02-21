@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { signIn } from 'next-auth/react';
 import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -38,9 +39,14 @@ function LoginForm() {
   return (
     <div className="flex min-h-screen items-center justify-center p-4">
       <div className="w-full max-w-md rounded-xl border bg-card text-card-foreground shadow p-6">
-        <div className="flex flex-col space-y-1.5 mb-6">
-          <h1 className="text-xl font-semibold sm:text-2xl">Sign in</h1>
-          <p className="text-sm text-muted-foreground">Use your username (must exist in users table)</p>
+        <div className="mb-6 flex flex-col items-center space-y-3">
+          <div className="relative flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-primary/10">
+            <Image src="/logo.png" alt="Madrasah" width={56} height={56} className="object-contain p-1" />
+          </div>
+          <div className="flex flex-col space-y-1.5 text-center">
+            <h1 className="text-xl font-semibold sm:text-2xl">Sign in</h1>
+            <p className="text-sm text-muted-foreground">Use your username (must exist in users table)</p>
+          </div>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">

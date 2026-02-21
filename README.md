@@ -62,3 +62,23 @@ Open http://localhost:3000
 ## Environment
 
 Set `DATABASE_URL` in `.env` (Neon PostgreSQL).
+
+## Deploy on Vercel
+
+1. Push the repo and import the project in [Vercel](https://vercel.com).
+2. Set **Environment Variables** in the project settings (or in the Vercel dashboard):
+
+   | Variable | Required | Notes |
+   |----------|----------|--------|
+   | `DATABASE_URL` | Yes | PostgreSQL connection string. Prefer a **pooled** URL (e.g. Neon with `?pgbouncer=true` or `?connection_limit=1`) for serverless. |
+   | `NEXTAUTH_SECRET` | Yes | Random secret for session signing. |
+   | `NEXTAUTH_URL` | Yes | Your app URL, e.g. `https://your-app.vercel.app`. Vercel can set this automatically if you add it once. |
+   | `IMAGEKIT_PRIVATE_KEY` | If using uploads | ImageKit private API key (server-only). |
+   | `IMAGEKIT_PUBLIC_KEY` | If using uploads | ImageKit public key. |
+   | `NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT` | If using uploads | ImageKit URL endpoint (e.g. `https://ik.imagekit.io/your_id`). |
+   | `NEXT_PUBLIC_IMAGEKIT_PUBLIC_KEY` | If using uploads | Same as `IMAGEKIT_PUBLIC_KEY` for client-side upload. |
+
+3. Run migrations against the production DB before or after first deploy (e.g. `npx prisma migrate deploy` from your machine or a one-off script).
+4. Optionally seed admin and roles once: run seed scripts locally against the production `DATABASE_URL`, or use a one-off Vercel task.
+
+Build uses `prisma generate && next build` (see `vercel.json`). The `postinstall` script also runs `prisma generate` so the Prisma client is available during install.

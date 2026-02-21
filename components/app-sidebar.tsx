@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
@@ -12,7 +13,6 @@ import {
   Menu,
   LogOut,
   Shield,
-  BookMarked,
   Banknote,
 } from 'lucide-react';
 import { signOut } from 'next-auth/react';
@@ -73,8 +73,8 @@ function SidebarContent({
           onClick={onLinkClick}
           className="flex items-center gap-3 rounded-xl bg-primary/5 px-4 py-3 transition-colors hover:bg-primary/10"
         >
-          <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <BookMarked className="size-5" />
+          <div className="relative flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-primary text-primary-foreground">
+            <Image src="/logo.png" alt="" width={40} height={40} className="object-contain p-1" />
           </div>
           <div>
             <span className="font-arabic block text-xs text-muted-foreground" lang="ar">
@@ -134,8 +134,8 @@ export function AppSidebar({ user }: { user: { username?: string } | null }) {
           <Menu className="size-5" />
         </button>
         <Link href="/" className="flex items-center gap-2">
-          <div className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <BookMarked className="size-4" />
+          <div className="relative flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-primary text-primary-foreground">
+            <Image src="/logo.png" alt="" width={32} height={32} className="object-contain p-0.5" />
           </div>
           <span className="font-semibold">Madrasah</span>
         </Link>

@@ -4,6 +4,7 @@
   "description": "Madrasah Academic System - Qur'an memorization & subject grading",
   "private": true,
   "scripts": {
+    "postinstall": "prisma generate",
     "dev": "next dev --turbopack",
     "dev:webpack": "next dev",
     "build": "next build",

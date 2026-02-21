@@ -1,10 +1,11 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { signOut } from 'next-auth/react';
-import { BookMarked, LogOut } from 'lucide-react';
+import { LogOut } from 'lucide-react';
 
 export function ParentLayout({
   user,
@@ -33,8 +34,8 @@ export function ParentLayout({
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-30 flex h-14 items-center justify-between gap-4 border-b border-border/60 bg-card px-4 shadow-sm sm:px-6">
         <Link href="/parent" className="flex items-center gap-2">
-          <div className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <BookMarked className="size-4" />
+          <div className="relative flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-primary text-primary-foreground">
+            <Image src="/logo.png" alt="" width={32} height={32} className="object-contain p-0.5" />
           </div>
           <span className="font-semibold">My Children</span>
         </Link>
