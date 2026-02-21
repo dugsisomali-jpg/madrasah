@@ -41,7 +41,7 @@ function LoginForm() {
       <div className="w-full max-w-md rounded-xl border bg-card text-card-foreground shadow p-6">
         <div className="mb-6 flex flex-col items-center space-y-3">
           <div className="relative flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-primary/10">
-            <Image src="/favicon.ico" alt="Madrasah" width={56} height={56} className="object-contain p-1" />
+            <Image src="/logo.png" alt="Madrasah" width={56} height={56} className="object-contain p-1" />
           </div>
           <div className="flex flex-col space-y-1.5 text-center">
             <h1 className="text-xl font-semibold sm:text-2xl">Sign in</h1>
