@@ -158,6 +158,7 @@ export function ParentDashboard() {
                         width={isActive ? 112 : 80}
                         height={isActive ? 112 : 80}
                         transformation={[{ height: isActive ? '112' : '80', width: isActive ? '112' : '80', crop: 'at_max' }]}
+                        responsive={false}
                         alt={child.name}
                         className="h-full w-full object-cover"
                       />

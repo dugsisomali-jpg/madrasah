@@ -44,6 +44,7 @@ function Avatar({ imagePath, name }: { imagePath?: string | null; name: string }
       width={96}
       height={96}
       transformation={[{ height: '96', width: '96', crop: 'at_max' }]}
+      responsive={false}
       alt={name}
       className="h-12 w-12 shrink-0 rounded-full object-cover"
     />

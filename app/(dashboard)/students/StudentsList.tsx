@@ -102,6 +102,7 @@ function StudentAvatar({
       width={sizePx}
       height={sizePx}
       transformation={[{ height: '256', width: '256', crop: 'at_max' }]}
+      responsive={false}
       alt={name}
       className={`shrink-0 object-cover object-center ${dim} ${rounded} ${className ?? ''}`}
     />

@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { Image, ImageKitProvider } from '@imagekit/next';
 
 type Student = {
@@ -16,17 +17,21 @@ type Student = {
 
 function StudentProfileInner({ student }: { student: Student }) {
   const urlEndpoint = process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT;
+  const [imageError, setImageError] = useState(false);
+  const showImage = student.imagePath && urlEndpoint && !imageError;
 
   return (
     <div className="flex flex-1 flex-col gap-4 sm:flex-row sm:items-start">
-      {student.imagePath && urlEndpoint ? (
+      {showImage ? (
         <Image
           src={student.imagePath.startsWith('/') ? student.imagePath : `/${student.imagePath}`}
           width={120}
           height={120}
           transformation={[{ height: '120', width: '120', crop: 'at_max' }]}
+          responsive={false}
           alt={student.name}
           className="h-24 w-24 shrink-0 rounded-full object-cover border-2 border-muted"
+          onError={() => setImageError(true)}
         />
       ) : (
         <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-full bg-muted text-4xl font-bold text-muted-foreground">
