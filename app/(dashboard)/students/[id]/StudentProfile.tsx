@@ -24,7 +24,7 @@ function StudentProfileInner({ student }: { student: Student }) {
     <div className="flex flex-1 flex-col gap-4 sm:flex-row sm:items-start">
       {showImage ? (
         <Image
-          src={student.imagePath.startsWith('/') ? student.imagePath : `/${student.imagePath}`}
+          src={(student.imagePath ?? '').startsWith('/') ? (student.imagePath ?? '') : `/${student.imagePath ?? ''}`}
           width={120}
           height={120}
           transformation={[{ height: '120', width: '120', crop: 'at_max' }]}
