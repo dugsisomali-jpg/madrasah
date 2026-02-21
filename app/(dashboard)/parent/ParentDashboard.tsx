@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { BookOpen, FileCheck, Banknote } from 'lucide-react';
-import { Image, ImageKitProvider } from '@imagekit/react';
+import { Image, ImageKitProvider } from '@imagekit/next';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 type Child = {
@@ -154,8 +154,9 @@ export function ParentDashboard() {
                   <div className={`shrink-0 overflow-hidden rounded-full ${isActive ? 'h-14 w-14 ring-2 ring-primary' : 'h-10 w-10'}`}>
                     {child.imagePath && urlEndpoint ? (
                       <Image
-                        urlEndpoint={urlEndpoint}
                         src={child.imagePath.startsWith('/') ? child.imagePath : `/${child.imagePath}`}
+                        width={isActive ? 112 : 80}
+                        height={isActive ? 112 : 80}
                         transformation={[{ height: isActive ? '112' : '80', width: isActive ? '112' : '80', crop: 'at_max' }]}
                         alt={child.name}
                         className="h-full w-full object-cover"

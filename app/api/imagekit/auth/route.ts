@@ -1,21 +1,23 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { getImageKitAuth } from '@/lib/imagekit';
+import { getUploadAuthParams } from '@imagekit/next/server';
 
 export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  if (!process.env.IMAGEKIT_PRIVATE_KEY || !process.env.IMAGEKIT_PUBLIC_KEY || !process.env.IMAGEKIT_URL_ENDPOINT) {
+  const privateKey = process.env.IMAGEKIT_PRIVATE_KEY;
+  const publicKey = process.env.IMAGEKIT_PUBLIC_KEY;
+  if (!privateKey || !publicKey) {
     return NextResponse.json(
-      { error: 'ImageKit is not configured. Add IMAGEKIT_* env vars.' },
+      { error: 'ImageKit is not configured. Add IMAGEKIT_PRIVATE_KEY and IMAGEKIT_PUBLIC_KEY.' },
       { status: 500 }
     );
   }
 
   try {
-    const auth = getImageKitAuth();
+    const auth = getUploadAuthParams({ privateKey, publicKey });
     return NextResponse.json(auth);
   } catch (err) {
     console.error('ImageKit auth error:', err);

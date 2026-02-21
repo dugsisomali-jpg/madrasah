@@ -57,7 +57,8 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
-        token.username = user.username;
+        const u = user as { username?: string };
+        token.username = u.username ?? '';
       }
       return token;
     },
@@ -72,4 +73,4 @@ export const authOptions: NextAuthOptions = {
   session: { strategy: 'jwt', maxAge: 30 * 24 * 60 * 60 },
   pages: { signIn: '/login' },
   trustHost: true,
-};
+} as NextAuthOptions;

@@ -17,6 +17,7 @@
     "db:clean:payments": "npx tsx prisma/clean-payments.ts"
   },
   "dependencies": {
+    "@imagekit/next": "^2.1.5",
     "@imagekit/nodejs": "^7.3.0",
     "@imagekit/react": "^5.0.1",
     "@prisma/client": "^5.22.0",

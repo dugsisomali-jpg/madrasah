@@ -1,13 +1,13 @@
 'use client';
 
-import { Image, ImageKitProvider } from '@imagekit/react';
+import { Image, ImageKitProvider } from '@imagekit/next';
 
 type Student = {
   id: string;
   name: string;
   motherName?: string | null;
   motherPhone?: string | null;
-  dateOfBirth?: string | null;
+  dateOfBirth?: string | Date | null;
   address?: string | null;
   imagePath?: string | null;
   fee?: number | string | null;
@@ -21,8 +21,9 @@ function StudentProfileInner({ student }: { student: Student }) {
     <div className="flex flex-1 flex-col gap-4 sm:flex-row sm:items-start">
       {student.imagePath && urlEndpoint ? (
         <Image
-          urlEndpoint={urlEndpoint}
           src={student.imagePath.startsWith('/') ? student.imagePath : `/${student.imagePath}`}
+          width={120}
+          height={120}
           transformation={[{ height: '120', width: '120', crop: 'at_max' }]}
           alt={student.name}
           className="h-24 w-24 shrink-0 rounded-full object-cover border-2 border-muted"

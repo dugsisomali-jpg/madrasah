@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
   const canViewFee = session?.user?.id ? await hasPermission(session.user.id, 'students.fee_viewer') : false;
   try {
     const raw = createSchema.parse(await req.json());
-    const feeVal = canViewFee && raw.fee !== '' && raw.fee != null ? Number(raw.fee) : undefined;
+    const feeVal = canViewFee && raw.fee != null ? raw.fee : undefined;
     const payload = {
       name: raw.name,
       motherName: raw.motherName || undefined,

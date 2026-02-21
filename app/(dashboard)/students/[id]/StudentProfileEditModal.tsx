@@ -1,8 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
-import { Image, ImageKitProvider } from '@imagekit/react';
-import { upload } from '@imagekit/javascript';
+import { Image, ImageKitProvider, upload } from '@imagekit/next';
 import { Camera, User } from 'lucide-react';
 
 type Student = {
@@ -41,8 +40,9 @@ function Avatar({ imagePath, name }: { imagePath?: string | null; name: string }
   const src = imagePath.startsWith('/') ? imagePath : `/${imagePath}`;
   return (
     <Image
-      urlEndpoint={urlEndpoint}
       src={src}
+      width={96}
+      height={96}
       transformation={[{ height: '96', width: '96', crop: 'at_max' }]}
       alt={name}
       className="h-12 w-12 shrink-0 rounded-full object-cover"
@@ -104,7 +104,7 @@ function StudentProfileEditModalInner({
     try {
       const authRes = await fetch('/api/imagekit/auth');
       const auth = await authRes.json();
-      const { upload: ikUpload } = await import('@imagekit/javascript');
+      const { upload: ikUpload } = await import('@imagekit/next');
       const result = await ikUpload({
         file,
         fileName: `student-${Date.now()}-${file.name}`,
@@ -115,7 +115,7 @@ function StudentProfileEditModalInner({
         publicKey: process.env.NEXT_PUBLIC_IMAGEKIT_PUBLIC_KEY!,
         useUniqueFileName: true,
       });
-      setForm((f) => ({ ...f, imagePath: result.filePath }));
+      setForm((f) => ({ ...f, imagePath: result.filePath ?? f.imagePath }));
     } catch (err) {
       console.error('Upload error:', err);
     } finally {

@@ -14,7 +14,8 @@ export async function POST(req: NextRequest) {
   const { error: authError } = await requireAuth();
   if (authError) return authError;
   try {
-    const data = createSchema.parse(await req.json());
+    const parsed = createSchema.parse(await req.json());
+    const data = { ...parsed, id: `subj-${crypto.randomUUID()}` };
     const subject = await prisma.subject.create({ data });
     return NextResponse.json(subject, { status: 201 });
   } catch (err) {

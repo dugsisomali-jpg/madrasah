@@ -2,8 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react';
 import Link from 'next/link';
-import { Image, ImageKitProvider } from '@imagekit/react';
-import { upload } from '@imagekit/javascript';
+import { Image, ImageKitProvider, upload } from '@imagekit/next';
 import {
   UserPlus,
   Camera,
@@ -96,10 +95,12 @@ function StudentAvatar({
     );
   }
   const src = imagePath.startsWith('/') ? imagePath : `/${imagePath}`;
+  const sizePx = size === 'sm' ? 40 : size === 'lg' ? 64 : size === 'fill' ? 256 : 48;
   return (
     <Image
-      urlEndpoint={urlEndpoint}
       src={src}
+      width={sizePx}
+      height={sizePx}
       transformation={[{ height: '256', width: '256', crop: 'at_max' }]}
       alt={name}
       className={`shrink-0 object-cover object-center ${dim} ${rounded} ${className ?? ''}`}
@@ -358,7 +359,7 @@ function StudentsListInner() {
         publicKey: process.env.NEXT_PUBLIC_IMAGEKIT_PUBLIC_KEY!,
         useUniqueFileName: true,
       });
-      setForm((f) => ({ ...f, imagePath: result.filePath }));
+      setForm((f) => ({ ...f, imagePath: result.filePath ?? f.imagePath }));
     } catch (err) {
       console.error('Upload error:', err);
     } finally {
