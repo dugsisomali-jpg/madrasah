@@ -15,6 +15,7 @@ import {
   Shield,
   Banknote,
   BookMarked,
+  Wallet,
 } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 
@@ -24,6 +25,7 @@ const navItems: { href: string; label: string; icon: React.ComponentType<{ class
   { href: '/students', label: 'Students', icon: Users },
   { href: '/teachers', label: 'Teachers', icon: GraduationCap },
   { href: '/payments', label: 'Payments', icon: Banknote },
+  { href: '/receivables', label: 'Receivables', icon: Wallet },
   { href: '/exams', label: 'Exams', icon: FileCheck },
   { href: '/subjects', label: 'Subjects', icon: BookMarked },
   { href: '/user-management', label: 'User Management', icon: Shield },
@@ -34,7 +36,7 @@ function NavLinks({ onLinkClick }: { onLinkClick?: () => void }) {
   return (
     <nav className="flex flex-col gap-1">
       {navItems.map(({ href, label, icon: Icon }) => {
-        const isActive = pathname === href;
+        const isActive = pathname === href || (href === '/receivables' && pathname.startsWith('/receivables/'));
         return (
           <Link
             key={href}

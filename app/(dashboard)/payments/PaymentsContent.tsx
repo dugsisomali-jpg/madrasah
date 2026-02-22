@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Swal from 'sweetalert2';
-import { Plus, Receipt, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Users, User, ExternalLink, CalendarRange, Loader2, UsersRound } from 'lucide-react';
+import { Plus, Receipt, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Users, User, ExternalLink, CalendarRange, Loader2, UsersRound, Calendar } from 'lucide-react';
 import { SearchableSelect } from '@/components/SearchableSelect';
 import {
   Table,
@@ -28,6 +28,7 @@ type Payment = {
   totalDue: number | string;
   discount?: number | string;
   amountPaid: number | string;
+  balanceDueDate?: string | null;
   canAddReceipt?: boolean;
   Student?: Student;
   receipts?: ReceiptRow[];
@@ -88,6 +89,9 @@ export function PaymentsContent() {
   const [parentDiscount, setParentDiscount] = useState('');
   const [parentAmountToPay, setParentAmountToPay] = useState('');
   const [parentSubmitLoading, setParentSubmitLoading] = useState(false);
+  const [dueDateModalPayment, setDueDateModalPayment] = useState<Payment | null>(null);
+  const [dueDateModalValue, setDueDateModalValue] = useState('');
+  const [dueDateModalSaving, setDueDateModalSaving] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -148,6 +152,31 @@ export function PaymentsContent() {
         setTotal(0);
       })
       .finally(() => setLoading(false));
+  };
+
+  const openDueDateModal = (p: Payment) => {
+    const d = p.balanceDueDate;
+    setDueDateModalValue(d ? (typeof d === 'string' ? d.slice(0, 10) : new Date(d).toISOString().slice(0, 10)) : '');
+    setDueDateModalPayment(p);
+  };
+
+  const saveDueDateModal = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!dueDateModalPayment) return;
+    setDueDateModalSaving(true);
+    fetch(`/api/payments/${dueDateModalPayment.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ balanceDueDate: dueDateModalValue.trim() || null }),
+    })
+      .then((r) => {
+        if (!r.ok) throw new Error('Failed to save');
+        setDueDateModalPayment(null);
+        loadPayments();
+        Swal.fire({ icon: 'success', title: 'Saved', text: 'Due date updated.' });
+      })
+      .catch(() => Swal.fire({ icon: 'error', title: 'Error', text: 'Could not save due date.' }))
+      .finally(() => setDueDateModalSaving(false));
   };
 
   useEffect(() => {
@@ -572,6 +601,7 @@ export function PaymentsContent() {
                   <TableHead className="text-right whitespace-nowrap">Discount</TableHead>
                   <TableHead className="text-right whitespace-nowrap">Paid</TableHead>
                   <TableHead className="text-right whitespace-nowrap">Balance</TableHead>
+                  <TableHead className="whitespace-nowrap">Due date</TableHead>
                   <TableHead className="text-center whitespace-nowrap">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -579,6 +609,9 @@ export function PaymentsContent() {
                 {payments.map((p, i) => {
                   const balance = n(p.totalDue) - n(p.discount) - n(p.amountPaid);
                   const hasCarriedOver = n(p.balanceCarriedOver) > 0;
+                  const dueDateStr = p.balanceDueDate
+                    ? (typeof p.balanceDueDate === 'string' ? p.balanceDueDate.slice(0, 10) : new Date(p.balanceDueDate).toISOString().slice(0, 10))
+                    : null;
                   return (
                     <TableRow key={p.id} className={i % 2 === 1 ? 'bg-muted/5' : ''}>
                       <TableCell className="font-medium">{p.Student?.name ?? '—'}</TableCell>
@@ -597,8 +630,40 @@ export function PaymentsContent() {
                       <TableCell className={`text-right font-medium ${balance > 0 ? 'text-destructive' : 'text-emerald-600'}`}>
                         {balance.toLocaleString()} KES
                       </TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        {dueDateStr ? (
+                          canManage ? (
+                            <button
+                              type="button"
+                              onClick={() => openDueDateModal(p)}
+                              className="text-xs text-amber-600 hover:underline dark:text-amber-400"
+                            >
+                              {dueDateStr}
+                            </button>
+                          ) : (
+                            <span className="text-muted-foreground">{dueDateStr}</span>
+                          )
+                        ) : balance > 0 && canManage ? (
+                          <button
+                            type="button"
+                            onClick={() => openDueDateModal(p)}
+                            className="text-xs text-amber-600 hover:underline dark:text-amber-400"
+                          >
+                            Set due date
+                          </button>
+                        ) : balance > 0 ? (
+                          <Link
+                            href={`/payments/${p.id}`}
+                            className="text-xs text-amber-600 hover:underline dark:text-amber-400"
+                          >
+                            Set in Detail
+                          </Link>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
                       <TableCell>
-                        <div className="flex items-center justify-center gap-2">
+                        <div className="flex flex-wrap items-center justify-center gap-2">
                           <Link
                             href={`/payments/${p.id}`}
                             className="inline-flex items-center gap-1 rounded-lg border px-2 py-1.5 text-xs font-medium hover:bg-muted"
@@ -619,6 +684,12 @@ export function PaymentsContent() {
                             ) : (
                               <span className="text-xs text-muted-foreground">Balance carried to next month</span>
                             )
+                          )}
+                          {balance > 0 && dueDateStr && (
+                            <span className="inline-flex items-center gap-1 rounded-lg border border-amber-200 bg-amber-50/80 px-2 py-1.5 text-xs font-medium text-amber-800 dark:border-amber-800/50 dark:bg-amber-900/20 dark:text-amber-200">
+                              <Calendar className="h-3.5 w-3.5" />
+                              Due {dueDateStr}
+                            </span>
                           )}
                         </div>
                       </TableCell>
@@ -672,6 +743,56 @@ export function PaymentsContent() {
                 <ChevronRight className="h-4 w-4" />
               </button>
             </div>
+          </div>
+        </>
+      )}
+
+      {dueDateModalPayment && (
+        <>
+          <div className="fixed inset-0 z-50 bg-black/60" onClick={() => setDueDateModalPayment(null)} aria-hidden="true" />
+          <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-2xl border border-slate-200/60 bg-card shadow-2xl dark:border-slate-700/50">
+            <div className="border-b border-border bg-gradient-to-r from-amber-50 to-transparent px-6 py-4 dark:from-amber-900/20">
+              <h2 className="flex items-center gap-2 text-lg font-semibold text-slate-900 dark:text-slate-100">
+                <Calendar className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                Set due date for balance
+              </h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {dueDateModalPayment.Student?.name ?? 'Student'} — {MONTHS[dueDateModalPayment.month - 1]} {dueDateModalPayment.year}
+              </p>
+              <p className="mt-0.5 text-sm font-medium text-destructive">
+                Balance: {(n(dueDateModalPayment.totalDue) - n(dueDateModalPayment.discount) - n(dueDateModalPayment.amountPaid)).toLocaleString()} KES
+              </p>
+            </div>
+            <form onSubmit={saveDueDateModal} className="p-6">
+              <div>
+                <label htmlFor="dueDateModalInput" className="mb-1.5 block text-sm font-medium">
+                  Pay by date
+                </label>
+                <input
+                  id="dueDateModalInput"
+                  type="date"
+                  value={dueDateModalValue}
+                  onChange={(e) => setDueDateModalValue(e.target.value)}
+                  className="flex h-10 w-full rounded-xl border border-input bg-background px-4 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2"
+                />
+              </div>
+              <div className="mt-6 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setDueDateModalPayment(null)}
+                  className={btnSecondary}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={dueDateModalSaving}
+                  className="inline-flex h-10 items-center justify-center rounded-xl bg-amber-600 px-5 text-sm font-medium text-white shadow-sm hover:bg-amber-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 disabled:opacity-50"
+                >
+                  {dueDateModalSaving ? 'Saving…' : 'Save'}
+                </button>
+              </div>
+            </form>
           </div>
         </>
       )}

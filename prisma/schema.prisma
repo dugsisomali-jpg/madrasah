@@ -89,6 +89,7 @@ model Payment {
   totalDue           Decimal   @db.Decimal(10, 2) // feeAmount + balanceCarriedOver
   discount           Decimal   @db.Decimal(10, 2) @default(0) // Amount waived (reduces amount due)
   amountPaid         Decimal   @db.Decimal(10, 2) @default(0) // Sum of receipts
+  balanceDueDate     DateTime?  @db.Date // When the remaining balance is due (appointment to pay)
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
   Student            Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)

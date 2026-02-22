@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Swal from 'sweetalert2';
-import { ArrowLeft, Plus, Receipt, Printer, FileDown } from 'lucide-react';
+import { ArrowLeft, Plus, Receipt, Printer, FileDown, Calendar } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -27,6 +27,7 @@ type Payment = {
   totalDue: number | string;
   discount?: number | string;
   amountPaid: number | string;
+  balanceDueDate?: string | null;
   canAddReceipt?: boolean;
   Student?: Student;
   receipts?: ReceiptRow[];
@@ -286,14 +287,45 @@ export function PaymentDetailContent({ paymentId }: { paymentId: string }) {
   const [receiptLoading, setReceiptLoading] = useState(false);
   const [canManage, setCanManage] = useState(false);
   const [pdfExporting, setPdfExporting] = useState(false);
+  const [balanceDueDate, setBalanceDueDate] = useState('');
+  const [appointmentSaving, setAppointmentSaving] = useState(false);
 
   const loadPayment = () => {
     if (!paymentId) return;
     fetch(`/api/payments/${paymentId}`)
       .then((r) => r.json())
-      .then((data) => setPayment(data))
+      .then((data) => {
+        setPayment(data);
+        const d = data?.balanceDueDate;
+        setBalanceDueDate(d ? (typeof d === 'string' ? d.slice(0, 10) : new Date(d).toISOString().slice(0, 10)) : '');
+      })
       .catch(() => setPayment(null))
       .finally(() => setLoading(false));
+  };
+
+  const handleSaveAppointment = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!paymentId || !payment) return;
+    setAppointmentSaving(true);
+    fetch(`/api/payments/${paymentId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        balanceDueDate: balanceDueDate.trim() || null,
+      }),
+    })
+      .then((r) => {
+        if (r.ok) return r.json();
+        throw new Error('Failed to save');
+      })
+      .then((data) => {
+        setPayment(data);
+        const d = data?.balanceDueDate;
+        setBalanceDueDate(d ? (typeof d === 'string' ? d.slice(0, 10) : new Date(d).toISOString().slice(0, 10)) : '');
+        Swal.fire({ icon: 'success', title: 'Saved', text: 'Appointment date for balance updated.' });
+      })
+      .catch(() => Swal.fire({ icon: 'error', title: 'Error', text: 'Could not save appointment date.' }))
+      .finally(() => setAppointmentSaving(false));
   };
 
   useEffect(() => {
@@ -480,6 +512,54 @@ export function PaymentDetailContent({ paymentId }: { paymentId: string }) {
             </p>
           </div>
         </div>
+
+        {balance > 0 && (
+          <div className="mt-6 rounded-xl border border-amber-200/80 bg-amber-50/50 p-4 dark:border-amber-800/50 dark:bg-amber-900/10">
+            <h3 className="flex items-center gap-2 font-medium text-amber-900 dark:text-amber-100">
+              <Calendar className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+              Appointment for balance
+            </h3>
+            <p className="mt-1 text-sm text-amber-800/80 dark:text-amber-200/80">
+              Remaining {balance.toLocaleString()} KES — set when the parent/student should pay.
+            </p>
+            {canManage ? (
+              <form onSubmit={handleSaveAppointment} className="mt-4 flex flex-wrap items-end gap-3">
+                <div className="min-w-[200px]">
+                  <label htmlFor="balanceDueDate" className="mb-1.5 block text-sm font-medium text-foreground">
+                    Pay by date
+                  </label>
+                  <input
+                    id="balanceDueDate"
+                    type="date"
+                    value={balanceDueDate}
+                    onChange={(e) => setBalanceDueDate(e.target.value)}
+                    className="flex h-10 w-full rounded-xl border border-input bg-background px-4 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={appointmentSaving}
+                  className="inline-flex h-10 items-center justify-center rounded-xl bg-amber-600 px-5 text-sm font-medium text-white shadow-sm hover:bg-amber-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 disabled:opacity-50"
+                >
+                  {appointmentSaving ? 'Saving…' : 'Save date'}
+                </button>
+              </form>
+            ) : (
+              <div className="mt-4 flex flex-wrap items-center gap-3">
+                {payment.balanceDueDate ? (
+                  <>
+                    <span className="inline-flex items-center gap-2 rounded-lg bg-amber-200/80 px-3 py-1.5 text-sm font-medium text-amber-900 dark:bg-amber-800/50 dark:text-amber-100">
+                      <Calendar className="h-4 w-4" />
+                      Pay by {typeof payment.balanceDueDate === 'string' ? payment.balanceDueDate.slice(0, 10) : new Date(payment.balanceDueDate).toISOString().slice(0, 10)}
+                    </span>
+                  </>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No pay-by date set.</p>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="rounded-xl border bg-card p-6 shadow-sm">

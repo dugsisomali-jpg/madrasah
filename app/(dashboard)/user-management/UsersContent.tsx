@@ -501,18 +501,18 @@ export function UsersContent() {
                     <button
                       type="button"
                       onClick={() => openEditProfileModal(u)}
-                      className={`rounded-xl ${btnSecondary}`}
+                      title="Edit user"
+                      className={`rounded-xl p-2 ${btnSecondary}`}
                     >
                       <Pencil className="h-4 w-4" />
-                      Edit user
                     </button>
                     <button
                       type="button"
                       onClick={() => openEditModal(u)}
-                      className={`rounded-xl ${btnSecondary}`}
+                      title="Edit access"
+                      className={`rounded-xl p-2 ${btnSecondary}`}
                     >
                       <Shield className="h-4 w-4" />
-                      Edit access
                     </button>
                   </div>
                 </div>

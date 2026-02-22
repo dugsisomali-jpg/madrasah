@@ -45,7 +45,7 @@ const btnSecondary = `${btnBase} border border-input bg-background hover:bg-acce
 function StudentCardSkeleton() {
   return (
     <div className="flex items-stretch overflow-hidden rounded-xl border border-border bg-card p-0 shadow-sm">
-      <div className="w-24 shrink-0 animate-pulse bg-muted sm:w-28" />
+      <div className="w-[30%] shrink-0 animate-pulse bg-muted" />
       <div className="flex flex-1 flex-col justify-between gap-3 p-5">
         <div>
           <div className="h-5 w-32 animate-pulse rounded bg-muted" />
@@ -122,7 +122,7 @@ function StudentCard({
 }) {
   return (
     <div className="group relative flex items-stretch overflow-hidden rounded-xl border border-border bg-card shadow-sm transition-all hover:shadow-md hover:border-border/80">
-      <div className="flex w-[28%] min-w-0 shrink-0 self-stretch overflow-hidden rounded-l-xl bg-muted">
+      <div className="flex w-[30%] min-w-0 shrink-0 self-stretch overflow-hidden rounded-l-xl bg-muted">
         <StudentAvatar imagePath={s.imagePath} name={s.name} size="fill" />
       </div>
       <div className="min-w-0 flex-1 flex flex-col justify-between p-5">
@@ -722,8 +722,8 @@ function StudentsListInner() {
         </>
       )}
 
-      {/* Card grid - 3 per row, horizontal Odoo-style cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {/* Card grid - 4 per row, horizontal Odoo-style cards */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {studentsLoading
           ? Array.from({ length: Math.min(perPage, 6) }).map((_, i) => (
               <StudentCardSkeleton key={i} />

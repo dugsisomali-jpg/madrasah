@@ -9,6 +9,7 @@ const routeTitles: Record<string, string> = {
   '/students': 'Students',
   '/teachers': 'Teachers',
   '/payments': 'Payments',
+  '/receivables': 'Receivables',
   '/exams': 'Exams',
   '/subjects': 'Subjects',
   '/user-management': 'User Management',
@@ -19,6 +20,7 @@ function getPageTitle(pathname: string): string {
   if (pathname in routeTitles) return routeTitles[pathname];
   if (pathname.startsWith('/students/')) return 'Student Details';
   if (pathname.startsWith('/payments/')) return 'Payment Detail';
+  if (pathname.startsWith('/receivables/')) return 'Student Receivables';
   const segment = pathname.slice(1).split('/')[0];
   if (segment) return segment.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
   return 'Madrasah';
