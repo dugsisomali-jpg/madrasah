@@ -50,6 +50,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       return NextResponse.json({ error: 'Receipt amount exceeds total due' }, { status: 400 });
     }
 
+    const receiptDate = new Date(raw.date);
+    receiptDate.setHours(0, 0, 0, 0);
+    const dueDate = payment.balanceDueDate ? new Date(payment.balanceDueDate) : null;
+    if (dueDate) dueDate.setHours(0, 0, 0, 0);
+    const resetDueDate = dueDate && receiptDate >= dueDate;
+
+    const updateData: { amountPaid: Decimal; balanceDueDate?: null } = { amountPaid: newAmountPaid };
+    if (resetDueDate) updateData.balanceDueDate = null;
+
     const [receipt] = await prisma.$transaction([
       prisma.receipt.create({
         data: {
@@ -62,7 +71,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       }),
       prisma.payment.update({
         where: { id: paymentId },
-        data: { amountPaid: newAmountPaid },
+        data: updateData,
       }),
     ]);
 

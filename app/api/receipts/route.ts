@@ -109,6 +109,7 @@ export async function POST(req: NextRequest) {
         totalDue: toNum(payment.totalDue),
         discount: toNum((payment as { discount?: unknown }).discount),
         amountPaid: toNum(payment.amountPaid),
+        balanceDueDate: (payment as { balanceDueDate?: Date | null }).balanceDueDate ?? null,
       });
     }
 
@@ -125,6 +126,7 @@ export async function POST(req: NextRequest) {
     }
 
     const receiptDate = new Date(raw.date);
+    receiptDate.setHours(0, 0, 0, 0);
     const receiptNumber = raw.receiptNumber || undefined;
     const notes = raw.notes || undefined;
 
@@ -162,9 +164,15 @@ export async function POST(req: NextRequest) {
             notes,
           },
         });
+        const dueDate = (p as { balanceDueDate?: Date | null }).balanceDueDate ? new Date((p as { balanceDueDate: Date }).balanceDueDate) : null;
+        if (dueDate) dueDate.setHours(0, 0, 0, 0);
+        const resetDueDate = dueDate && receiptDate >= dueDate;
         await tx.payment.update({
           where: { id: p.id },
-          data: { amountPaid: new Decimal(newAmountPaid) },
+          data: {
+            amountPaid: new Decimal(newAmountPaid),
+            ...(resetDueDate ? { balanceDueDate: null } : {}),
+          },
         });
         created++;
       }

@@ -118,6 +118,7 @@ export async function POST(req: NextRequest) {
         totalDue: toNum(payment.totalDue),
         discount: toNum((payment as { discount?: unknown }).discount),
         amountPaid: toNum(payment.amountPaid),
+        balanceDueDate: (payment as { balanceDueDate?: Date | null }).balanceDueDate ?? null,
       });
     }
 
@@ -203,6 +204,9 @@ export async function POST(req: NextRequest) {
       }));
     await prisma.receipt.createMany({ data: receiptData });
 
+    const receiptDateNorm = new Date(receiptDate);
+    receiptDateNorm.setHours(0, 0, 0, 0);
+
     await Promise.all(
       amountsToApply
         .filter((a) => a.amount > 0)
@@ -211,11 +215,15 @@ export async function POST(req: NextRequest) {
           const newAmountPaid = p.amountPaid + amount;
           const discRow = discountsToApply.find((d) => d.paymentId === paymentId);
           const newDiscount = p.discount + (discRow?.discount ?? 0);
+          const dueDate = (p as { balanceDueDate?: Date | null }).balanceDueDate ? new Date((p as { balanceDueDate: Date }).balanceDueDate) : null;
+          if (dueDate) dueDate.setHours(0, 0, 0, 0);
+          const resetDueDate = dueDate && receiptDateNorm >= dueDate;
           return prisma.payment.update({
             where: { id: paymentId },
             data: {
               amountPaid: new Decimal(newAmountPaid),
               ...(newDiscount > 0 ? { discount: new Decimal(newDiscount) } : {}),
+              ...(resetDueDate ? { balanceDueDate: null } : {}),
             },
           });
         }),
