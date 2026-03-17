@@ -94,6 +94,9 @@ export async function GET(req: NextRequest) {
                 for (let i = 0; i < 12; i++) {
                     const pm = testM === 1 ? 12 : testM - 1;
                     const py = testM === 1 ? testY - 1 : testY;
+
+                    if (py < currentY || (py === currentY && pm < currentM)) break;
+
                     const prev = await prisma.payment.findUnique({
                         where: { studentId_month_year: { studentId, month: pm, year: py } }
                     });
@@ -108,15 +111,11 @@ export async function GET(req: NextRequest) {
                 startM = testM;
                 startY = testY;
             }
-        } else {
-            const anyPayment = await prisma.payment.findFirst({
-                where: { studentId: student.id },
-                orderBy: [{ year: 'asc' }, { month: 'asc' }],
-            });
-            if (anyPayment) {
-                startM = anyPayment.month;
-                startY = anyPayment.year;
-            }
+        }
+
+        if (startY < currentY || (startY === currentY && startM < currentM)) {
+            startM = currentM;
+            startY = currentY;
         }
 
         let foundCount = 0;

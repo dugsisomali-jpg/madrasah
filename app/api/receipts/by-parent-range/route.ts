@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
   const canManage = session?.user?.id ? await hasPermission(session.user.id, 'payments.manage') : false;
   if (!canManage) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-  let body: unknown;
+  let body: any;
   try {
     body = await req.json();
   } catch {
@@ -65,11 +65,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No students found for this parent' }, { status: 400 });
     }
 
-    const monthsCount = (body as any).monthsCount;
+    const monthsCount = body.monthsCount;
     const receiptDate = new Date(raw.date);
     receiptDate.setHours(0, 0, 0, 0);
     const receiptNumber = raw.receiptNumber || undefined;
     const notes = raw.notes || undefined;
+    
+    const now = new Date();
+    const currentM = now.getMonth() + 1;
+    const currentY = now.getFullYear();
 
     const results = await prisma.$transaction(async (tx) => {
       let totalCreatedReceipts = 0;
@@ -82,10 +86,7 @@ export async function POST(req: NextRequest) {
         let studentMonths: { month: number, year: number }[] = [];
         if (monthsCount) {
             const count = parseInt(monthsCount, 10);
-            const now = new Date();
-            const currentM = now.getMonth() + 1;
-            const currentY = now.getFullYear();
-
+            
             const latestPaid = await tx.payment.findFirst({
                 where: { studentId, amountPaid: { gt: 0 } },
                 orderBy: [{ year: 'desc' }, { month: 'desc' }],
@@ -106,6 +107,8 @@ export async function POST(req: NextRequest) {
                     for (let i = 0; i < 12; i++) {
                         const pm = testM === 1 ? 12 : testM - 1;
                         const py = testM === 1 ? testY - 1 : testY;
+                        if (py < currentY || (py === currentY && pm < currentM)) break;
+
                         const prev = await tx.payment.findUnique({
                             where: { studentId_month_year: { studentId, month: pm, year: py } }
                         });
@@ -120,15 +123,11 @@ export async function POST(req: NextRequest) {
                     startM = testM;
                     startY = testY;
                 }
-            } else {
-                const anyPayment = await tx.payment.findFirst({
-                    where: { studentId },
-                    orderBy: [{ year: 'asc' }, { month: 'asc' }],
-                });
-                if (anyPayment) {
-                    startM = anyPayment.month;
-                    startY = anyPayment.year;
-                }
+            }
+
+            if (startY < currentY || (startY === currentY && startM < currentM)) {
+                startM = currentM;
+                startY = currentY;
             }
 
             let foundCount = 0;
@@ -143,7 +142,7 @@ export async function POST(req: NextRequest) {
                     foundCount++;
                 }
                 m++; if (m > 12) { m = 1; y++; }
-                if (y > now.getFullYear() + 5) break;
+                if (y > currentY + 5) break;
             }
         } else {
             studentMonths = [...monthRange(raw.fromMonth, raw.fromYear, raw.toMonth, raw.toYear)];
@@ -246,15 +245,8 @@ export async function POST(req: NextRequest) {
       }
       return { totalCreatedReceipts, totalAllocated };
     }, {
-      timeout: 30000, // Increase to 30s for large parent batches
+      timeout: 30000, 
     });
-
-    // Verification of total amount
-    if (Math.abs(results.totalAllocated - raw.totalAmount) > 0.1) {
-      // This shouldn't happen if the frontend calculates correctly, but good for safety
-      // Actually, if we allow partial payments in the future, this might change.
-      // But for now, let's assume full range payment as per implementation plan.
-    }
 
     return NextResponse.json({
       created: results.totalCreatedReceipts,

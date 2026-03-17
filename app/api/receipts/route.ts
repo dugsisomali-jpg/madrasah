@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
   const canManage = session?.user?.id ? await hasPermission(session.user.id, 'payments.manage') : false;
   if (!canManage) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-  let body: unknown;
+  let body: any;
   try {
     body = await req.json();
   } catch {
@@ -60,17 +60,17 @@ export async function POST(req: NextRequest) {
     if (student.fee == null || student.fee === undefined) return NextResponse.json({ error: 'Student has no fee set' }, { status: 400 });
     if (filterByTeacher && student.teacherId !== session!.user!.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-    const monthsCount = (body as any).monthsCount;
+    const monthsCount = body.monthsCount;
     let months: { month: number, year: number }[] = [];
     
+    const now = new Date();
+    const currentM = now.getMonth() + 1;
+    const currentY = now.getFullYear();
+
     if (monthsCount) {
         const count = parseInt(monthsCount, 10);
         if (isNaN(count) || count < 1) return NextResponse.json({ error: 'Invalid monthsCount' }, { status: 400 });
         
-        const now = new Date();
-        const currentM = now.getMonth() + 1;
-        const currentY = now.getFullYear();
-
         const latestPaid = await prisma.payment.findFirst({
             where: { studentId: raw.studentId, amountPaid: { gt: 0 } },
             orderBy: [{ year: 'desc' }, { month: 'desc' }],
@@ -91,6 +91,8 @@ export async function POST(req: NextRequest) {
                 for (let i = 0; i < 12; i++) {
                     const pm = testM === 1 ? 12 : testM - 1;
                     const py = testM === 1 ? testY - 1 : testY;
+                    if (py < currentY || (py === currentY && pm < currentM)) break;
+
                     const prev = await prisma.payment.findUnique({
                         where: { studentId_month_year: { studentId: raw.studentId, month: pm, year: py } }
                     });
@@ -105,22 +107,18 @@ export async function POST(req: NextRequest) {
                 startM = testM;
                 startY = testY;
             }
-        } else {
-            const anyPayment = await prisma.payment.findFirst({
-                where: { studentId: raw.studentId },
-                orderBy: [{ year: 'asc' }, { month: 'asc' }],
-            });
-            if (anyPayment) {
-                startM = anyPayment.month;
-                startY = anyPayment.year;
-            }
+        }
+
+        if (startY < currentY || (startY === currentY && startM < currentM)) {
+            startM = currentM;
+            startY = currentY;
         }
 
         let foundCount = 0;
         let m = startM, y = startY;
         while (foundCount < count) {
             const payment = await prisma.payment.findUnique({
-                where: { studentId: raw.studentId, month: m, year: y }
+                where: { studentId_month_year: { studentId: raw.studentId, month: m, year: y } }
             });
             const balance = payment ? toNum(payment.totalDue) - toNum((payment as any).discount) - toNum(payment.amountPaid) : toNum(student.fee);
             if (balance > 1) {
@@ -128,7 +126,7 @@ export async function POST(req: NextRequest) {
                 foundCount++;
             }
             m++; if (m > 12) { m = 1; y++; }
-            if (y > now.getFullYear() + 5) break;
+            if (y > currentY + 5) break;
         }
     } else {
         months = [...monthRange(raw.fromMonth, raw.fromYear, raw.toMonth, raw.toYear)];
@@ -137,12 +135,8 @@ export async function POST(req: NextRequest) {
     if (months.length === 0) return NextResponse.json({ error: 'Invalid month range' }, { status: 400 });
 
     const feePerMonth = toNum(student.fee);
-    const allPayments: { id: string; month: number; year: number; totalDue: number; discount: number; amountPaid: number; balanceDueDate: Date | null }[] = [];
+    const allPayments: any[] = [];
     let carry = 0;
-    
-    // Only check carry-over if we are NOT using smart duration (compatibility)
-    // Actually, even in smart duration, the 'testM/testY' might start at a month that had a carry from its previous.
-    // However, the smart logic above already finds the month with balance.
     
     if (!monthsCount) {
         const firstMonth = months[0];
@@ -152,7 +146,7 @@ export async function POST(req: NextRequest) {
           where: { studentId_month_year: { studentId: raw.studentId, month: prevOfFirstMonth, year: prevOfFirstYear } },
         });
         if (prevPayment) {
-          const prevBalance = toNum(prevPayment.totalDue) - toNum((prevPayment as { discount?: unknown }).discount) - toNum(prevPayment.amountPaid);
+          const prevBalance = toNum(prevPayment.totalDue) - toNum((prevPayment as any).discount) - toNum(prevPayment.amountPaid);
           if (prevBalance > 0) carry = prevBalance;
         }
     }
@@ -187,9 +181,9 @@ export async function POST(req: NextRequest) {
         month: payment.month,
         year: payment.year,
         totalDue: toNum(payment.totalDue),
-        discount: toNum((payment as { discount?: unknown }).discount),
+        discount: toNum((payment as any).discount),
         amountPaid: toNum(payment.amountPaid),
-        balanceDueDate: (payment as { balanceDueDate?: Date | null }).balanceDueDate ?? null,
+        balanceDueDate: (payment as any).balanceDueDate ?? null,
       });
     }
 
@@ -228,7 +222,7 @@ export async function POST(req: NextRequest) {
         },
       });
 
-      let created = 0;
+      let createdCount = 0;
       for (const p of payments) {
         const balance = p.totalDue - p.discount - p.amountPaid;
         const alloc = balance;
@@ -244,7 +238,7 @@ export async function POST(req: NextRequest) {
             notes,
           },
         });
-        const dueDate = (p as { balanceDueDate?: Date | null }).balanceDueDate ? new Date((p as { balanceDueDate: Date }).balanceDueDate) : null;
+        const dueDate = p.balanceDueDate ? new Date(p.balanceDueDate) : null;
         if (dueDate) dueDate.setHours(0, 0, 0, 0);
         const resetDueDate = dueDate && receiptDate >= dueDate;
         await tx.payment.update({
@@ -254,9 +248,9 @@ export async function POST(req: NextRequest) {
             ...(resetDueDate ? { balanceDueDate: null } : {}),
           },
         });
-        created++;
+        createdCount++;
       }
-      return { created, skipped: months.length - payments.length };
+      return { created: createdCount, skipped: months.length - payments.length };
     });
     return NextResponse.json({ created, months: payments.length, skipped }, { status: 201 });
   } catch (err) {

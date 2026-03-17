@@ -84,26 +84,23 @@ export async function GET(req: NextRequest) {
             startY = latestPaid.year;
             if (startM > 12) { startM = 1; startY++; }
         } else {
-            // If the latest record is NOT fully paid, we need to find the start of its "Unpaid Streak".
-            // Go backwards from this record until we find a fully paid month or hit a limit.
+            // Find start of unpaid streak, but never go before current month
             let testM = latestPaid.month;
             let testY = latestPaid.year;
             for (let i = 0; i < 12; i++) {
                 const pm = testM === 1 ? 12 : testM - 1;
                 const py = testM === 1 ? testY - 1 : testY;
+                
+                // Barrier: Don't go before current month
+                if (py < currentY || (py === currentY && pm < currentM)) break;
+
                 const prev = await prisma.payment.findUnique({
                     where: { studentId_month_year: { studentId, month: pm, year: py } }
                 });
                 if (prev) {
                     const bal = toNum(prev.totalDue) - toNum((prev as any).discount) - toNum(prev.amountPaid);
-                    if (bal > 1) {
-                        testM = pm; testY = py;
-                    } else {
-                        break; // Found a barrier
-                    }
+                    if (bal > 1) { testM = pm; testY = py; } else { break; }
                 } else {
-                    // No record, but the system assumes if a later one is unpaid, this one might be too.
-                    // However, we shouldn't assume too far back. 
                     if (i > 3) break;
                     testM = pm; testY = py;
                 }
@@ -111,17 +108,12 @@ export async function GET(req: NextRequest) {
             startM = testM;
             startY = testY;
         }
-    } else {
-        // No payments ever? Start from current or student creation?
-        // Let's look for any payment record at all
-        const anyPayment = await prisma.payment.findFirst({
-            where: { studentId },
-            orderBy: [{ year: 'asc' }, { month: 'asc' }],
-        });
-        if (anyPayment) {
-            startM = anyPayment.month;
-            startY = anyPayment.year;
-        }
+    }
+
+    // FINAL GUARD: Ensure we never start before current month for Pay Forward
+    if (startY < currentY || (startY === currentY && startM < currentM)) {
+        startM = currentM;
+        startY = currentY;
     }
 
     let foundCount = 0;
