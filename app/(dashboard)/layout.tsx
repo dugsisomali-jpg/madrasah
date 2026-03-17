@@ -1,7 +1,7 @@
 import { getServerSession } from 'next-auth';
 import { redirect } from 'next/navigation';
 import { authOptions } from '@/lib/auth';
-import { isParentRole } from '@/lib/auth-utils';
+import { isParentRole, getUserPermissions } from '@/lib/auth-utils';
 import { AppSidebar } from '@/components/app-sidebar';
 import { AppHeader } from '@/components/app-header';
 import { ParentLayout } from '@/components/parent-layout';
@@ -14,7 +14,8 @@ export default async function DashboardLayout({
   const session = await getServerSession(authOptions);
   if (!session) redirect('/login');
 
-  const isParent = session?.user?.id ? await isParentRole(session.user.id) : false;
+  const userId = session.user.id;
+  const isParent = userId ? await isParentRole(userId) : false;
 
   if (isParent) {
     return (
@@ -24,9 +25,11 @@ export default async function DashboardLayout({
     );
   }
 
+  const permissions = userId ? await getUserPermissions(userId) : [];
+
   return (
     <div className="min-h-screen bg-background">
-      <AppSidebar user={session.user} />
+      <AppSidebar user={session.user} permissions={permissions} />
       <main className="lg:pl-64">
         <AppHeader user={session.user} />
         <div className="min-h-[calc(100vh-3.5rem)] lg:min-h-[calc(100vh-3.5rem)] px-2 sm:px-4 lg:px-6">

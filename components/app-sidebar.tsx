@@ -20,24 +20,55 @@ import {
 } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 
-const navItems: { href: string; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+interface NavItem {
+  href: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  permission?: string;
+}
+
+const navItems: NavItem[] = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/memorization', label: 'Memorization', icon: BookOpen },
-  { href: '/students', label: 'Students', icon: Users },
-  { href: '/teachers', label: 'Teachers', icon: GraduationCap },
-  { href: '/payments', label: 'Payments', icon: Banknote },
-  { href: '/receivables', label: 'Receivables', icon: Wallet },
-  { href: '/exams', label: 'Exams', icon: FileCheck },
-  { href: '/subjects', label: 'Subjects', icon: BookMarked },
-  { href: '/attendance', label: 'Attendance', icon: ClipboardCheck },
-  { href: '/user-management', label: 'User Management', icon: Shield },
+  { href: '/memorization', label: 'Memorization', icon: BookOpen, permission: 'memorization.read' },
+  { href: '/students', label: 'Students', icon: Users, permission: 'students.read' },
+  { href: '/teachers', label: 'Teachers', icon: GraduationCap, permission: 'teachers.read' },
+  { href: '/payments', label: 'Payments', icon: Banknote, permission: 'payments.read' },
+  { href: '/receivables', label: 'Receivables', icon: Wallet, permission: 'payments.read' },
+  { href: '/exams', label: 'Exams', icon: FileCheck, permission: 'exams.manage' },
+  { href: '/subjects', label: 'Subjects', icon: BookMarked, permission: 'subjects.read' },
+  { href: '/attendance', label: 'Attendance', icon: ClipboardCheck, permission: 'attendance.read' },
+  { href: '/user-management', label: 'User Management', icon: Shield, permission: 'users.read' },
 ];
 
-function NavLinks({ onLinkClick }: { onLinkClick?: () => void }) {
+function NavLinks({ 
+  onLinkClick, 
+  permissions 
+}: { 
+  onLinkClick?: () => void;
+  permissions: string[] | null;
+}) {
   const pathname = usePathname();
+
+  const filteredItems = navItems.filter((item) => {
+    if (!item.permission) return true;
+    if (!permissions) return true; // Show all if permissions not loaded (to avoid flickering)
+
+    const target = item.permission.toLowerCase();
+    if (permissions.includes('manage.system') || permissions.includes('system.manage')) return true;
+    if (permissions.includes(target)) return true;
+
+    // Pattern matching
+    if (target.includes('.')) {
+      const [resource] = target.split('.');
+      if (permissions.includes(`${resource}.manage`)) return true;
+    }
+
+    return false;
+  });
+
   return (
     <nav className="flex flex-col gap-1">
-      {navItems.map(({ href, label, icon: Icon }) => {
+      {filteredItems.map(({ href, label, icon: Icon }) => {
         const isActive = pathname === href || (href === '/receivables' && pathname.startsWith('/receivables/'));
         return (
           <Link
@@ -65,10 +96,12 @@ function SidebarContent({
   className,
   onLinkClick,
   user,
+  permissions,
 }: {
   className?: string;
   onLinkClick?: () => void;
   user?: { username?: string } | null;
+  permissions: string[] | null;
 }) {
   return (
     <div className={`flex h-full flex-col ${className ?? ''}`}>
@@ -93,7 +126,7 @@ function SidebarContent({
         <p className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           Menu
         </p>
-        <NavLinks onLinkClick={onLinkClick} />
+        <NavLinks onLinkClick={onLinkClick} permissions={permissions} />
       </div>
 
       {/* User & sign out */}
@@ -117,13 +150,19 @@ function SidebarContent({
   );
 }
 
-export function AppSidebar({ user }: { user: { username?: string } | null }) {
+export function AppSidebar({ 
+  user, 
+  permissions = null 
+}: { 
+  user: { username?: string } | null;
+  permissions?: string[] | null;
+}) {
   const [open, setOpen] = useState(false);
   return (
     <>
       {/* Desktop sidebar */}
       <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r border-border/60 bg-card lg:flex lg:shadow-[4px_0_24px_-4px_rgba(0,0,0,0.08)]">
-        <SidebarContent user={user} />
+        <SidebarContent user={user} permissions={permissions} />
       </aside>
 
       {/* Mobile: header + slide-out */}
@@ -158,7 +197,7 @@ export function AppSidebar({ user }: { user: { username?: string } | null }) {
             aria-hidden="true"
           />
           <aside className="fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r border-border/60 bg-card shadow-2xl transition-transform lg:hidden">
-            <SidebarContent user={user} onLinkClick={() => setOpen(false)} />
+            <SidebarContent user={user} onLinkClick={() => setOpen(false)} permissions={permissions} />
           </aside>
         </>
       )}

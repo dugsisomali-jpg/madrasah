@@ -11,8 +11,8 @@ export async function requireAuth() {
   return { session, error: null };
 }
 
-/** True if user has the given permission (via roles or directPermissions). */
-export async function hasPermission(userId: string, permissionName: string): Promise<boolean> {
+/** Get all permissions for a user (via roles or directPermissions). */
+export async function getUserPermissions(userId: string): Promise<string[]> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
     include: {
@@ -20,15 +20,34 @@ export async function hasPermission(userId: string, permissionName: string): Pro
       directPermissions: { select: { name: true } },
     },
   });
-  if (!user) return false;
+  if (!user) return [];
   const fromRoles = user.roles.flatMap((r) => r.permissions.map((p) => p.name));
   const fromDirect = user.directPermissions.map((p) => p.name);
-  const allPerms = [...fromRoles, ...fromDirect].map((n) => (n || '').toLowerCase());
-  return (
-    allPerms.includes(permissionName.toLowerCase()) ||
-    allPerms.includes('manage.system') ||
-    allPerms.includes('system.manage')
-  );
+  return [...new Set([...fromRoles, ...fromDirect])]
+    .filter(Boolean)
+    .map((n) => n.toLowerCase());
+}
+
+/** True if user has the given permission (via roles or directPermissions). */
+export async function hasPermission(userId: string, permissionName: string): Promise<boolean> {
+  const allPerms = await getUserPermissions(userId);
+  const target = permissionName.toLowerCase();
+
+  // "manage.system" or "system.manage" grants everything
+  if (allPerms.includes('manage.system') || allPerms.includes('system.manage')) {
+    return true;
+  }
+
+  // Exact match
+  if (allPerms.includes(target)) return true;
+
+  // Pattern matching: "users.manage" satisfies "users.read", "users.update", etc.
+  if (target.includes('.')) {
+    const [resource] = target.split('.');
+    if (allPerms.includes(`${resource}.manage`)) return true;
+  }
+
+  return false;
 }
 
 /** True if current user should only see memorization records they recorded. Admins see all; everyone else (teachers, users with no role) sees only their own. */
