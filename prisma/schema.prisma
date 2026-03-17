@@ -18,6 +18,7 @@ model User {
   children              Student[]              @relation("StudentParent")
   studentsTaught        Student[]              @relation("StudentTeacher")
   memorizationRecorded  memorization_records[] @relation("MemorizationTeacher")
+  parentReceiptBatches  ReceiptBatch[]         @relation("ParentReceiptBatches")
 }
 
 model Role {
@@ -114,20 +115,23 @@ model Payment {
 
 model ReceiptBatch {
   id            String   @id @default(cuid())
-  studentId     String
+  studentId     String?
+  parentId      String?
   totalAmount   Decimal  @db.Decimal(10, 2)
   receiptNumber String?
   date          DateTime @db.Date
   notes         String?
-  fromMonth     Int      // 1-12
-  fromYear      Int
-  toMonth       Int      // 1-12
-  toYear        Int
+  fromMonth     Int?     // 1-12
+  fromYear      Int?
+  toMonth       Int?     // 1-12
+  toYear        Int?
   createdAt     DateTime @default(now())
-  Student       Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  Student       Student? @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  Parent        User?    @relation("ParentReceiptBatches", fields: [parentId], references: [id], onDelete: SetNull)
   receipts      Receipt[]
 
   @@index([studentId])
+  @@index([parentId])
   @@index([date])
 }
 

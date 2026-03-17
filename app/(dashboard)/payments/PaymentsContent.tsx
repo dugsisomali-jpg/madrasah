@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Swal from 'sweetalert2';
 import { Plus, Receipt, ChevronDown, Banknote, ChevronUp, ChevronLeft, ChevronRight, Users, User, ExternalLink, CalendarRange, Loader2, UsersRound, Calendar } from 'lucide-react';
 import { SearchableSelect } from '@/components/SearchableSelect';
+import { ParentReceiptPrintable } from '@/components/ParentReceiptPrintable';
 import {
   Table,
   TableBody,
@@ -95,6 +96,7 @@ export function PaymentsContent() {
   const [dueDateModalPayment, setDueDateModalPayment] = useState<Payment | null>(null);
   const [dueDateModalValue, setDueDateModalValue] = useState('');
   const [dueDateModalSaving, setDueDateModalSaving] = useState(false);
+  const [printBatchId, setPrintBatchId] = useState<string | null>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -345,6 +347,14 @@ export function PaymentsContent() {
                 ? `Created ${data.created} receipt(s) for ${data.months} month(s) (${data.skipped} already paid, skipped).`
                 : `Created ${data.created} receipt(s) for ${data.months} month(s) – ${rangeAmount} KES.`)
               : `Created ${data.created} receipt(s) for ${data.studentCount} children over ${rangeMonthsCount} months – ${rangeAmount} KES.`,
+            showCancelButton: data.receiptBatchId ? true : false,
+            confirmButtonText: 'Great!',
+            cancelButtonText: 'Print Receipt',
+            cancelButtonColor: '#0f172a',
+          }).then((result) => {
+            if (result.dismiss === Swal.DismissReason.cancel && data.receiptBatchId) {
+              setPrintBatchId(data.receiptBatchId);
+            }
           });
         } else {
           const err = await r.json().catch(() => ({}));
@@ -474,6 +484,14 @@ export function PaymentsContent() {
             icon: 'success',
             title: 'Receipts added',
             text: `Created ${data.created} receipt(s) for ${data.totalAmount.toLocaleString()} KES – ${MONTHS[data.month - 1]} ${data.year}.`,
+            showCancelButton: data.receiptBatchId ? true : false,
+            confirmButtonText: 'Great!',
+            cancelButtonText: 'Print Receipt',
+            cancelButtonColor: '#0f172a',
+          }).then((result) => {
+            if (result.dismiss === Swal.DismissReason.cancel && data.receiptBatchId) {
+              setPrintBatchId(data.receiptBatchId);
+            }
           });
         } else {
           const err = await r.json().catch(() => ({}));
@@ -1314,6 +1332,15 @@ export function PaymentsContent() {
                 </button>
               </div>
             </form>
+          </div>
+        </>
+      )}
+
+      {printBatchId && (
+        <>
+          <div className="fixed inset-0 z-[60] bg-slate-950/40 backdrop-blur-sm" onClick={() => setPrintBatchId(null)} aria-hidden="true" />
+          <div className="fixed left-1/2 top-1/2 z-[70] w-full max-w-4xl -translate-x-1/2 -translate-y-1/2 p-4">
+            <ParentReceiptPrintable batchId={printBatchId} onClose={() => setPrintBatchId(null)} />
           </div>
         </>
       )}

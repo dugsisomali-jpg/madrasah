@@ -79,6 +79,17 @@ export async function POST(req: NextRequest) {
       let totalCreatedReceipts = 0;
       let totalAllocated = 0;
 
+      // Create a single parent-level ReceiptBatch for grouping
+      const parentBatch = await (tx.receiptBatch as any).create({
+        data: {
+          parentId: raw.parentId,
+          totalAmount: new Decimal(raw.totalAmount),
+          receiptNumber,
+          date: receiptDate,
+          notes: notes,
+        }
+      });
+
       for (const student of students) {
         const studentId = student.id;
         const feePerMonth = toNum(student.fee);
@@ -197,28 +208,12 @@ export async function POST(req: NextRequest) {
         }
 
         if (studentPaymentsToPay.length > 0) {
-          const studentTotal = studentPaymentsToPay.reduce((sum, p) => sum + p.balance, 0);
-          
-          const receiptBatch = await tx.receiptBatch.create({
-            data: {
-              studentId,
-              totalAmount: new Decimal(studentTotal),
-              receiptNumber,
-              date: receiptDate,
-              notes,
-              fromMonth: studentPaymentsToPay[0].month,
-              fromYear: studentPaymentsToPay[0].year,
-              toMonth: studentPaymentsToPay[studentPaymentsToPay.length - 1].month,
-              toYear: studentPaymentsToPay[studentPaymentsToPay.length - 1].year,
-            },
-          });
-
           for (const p of studentPaymentsToPay) {
             const alloc = p.balance;
             await tx.receipt.create({
               data: {
                 paymentId: p.id,
-                receiptBatchId: receiptBatch.id,
+                receiptBatchId: parentBatch.id,
                 amount: new Decimal(alloc),
                 receiptNumber,
                 date: receiptDate,
@@ -243,7 +238,7 @@ export async function POST(req: NextRequest) {
           }
         }
       }
-      return { totalCreatedReceipts, totalAllocated };
+      return { totalCreatedReceipts, totalAllocated, receiptBatchId: parentBatch.id };
     }, {
       timeout: 30000, 
     });
@@ -252,6 +247,7 @@ export async function POST(req: NextRequest) {
       created: results.totalCreatedReceipts,
       totalAmount: results.totalAllocated,
       studentCount: students.length,
+      receiptBatchId: results.receiptBatchId,
     }, { status: 201 });
 
   } catch (err) {

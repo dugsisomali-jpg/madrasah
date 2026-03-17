@@ -184,22 +184,26 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const receiptData = amountsToApply
-      .filter((a) => a.amount > 0)
-      .map(({ paymentId, amount }) => ({
-        paymentId,
-        amount: new Decimal(amount),
-        receiptNumber: receiptNumber || undefined,
-        date: receiptDate,
-        notes: notes || undefined,
-      }));
-    await prisma.receipt.createMany({ data: receiptData });
-
     const receiptDateNorm = new Date(receiptDate);
     receiptDateNorm.setHours(0, 0, 0, 0);
 
-    await Promise.all(
-      amountsToApply
+    const { receiptBatchId, receiptsCreated } = await prisma.$transaction(async (tx) => {
+      // Create ReceiptBatch for grouping
+      const batch = await (tx.receiptBatch as any).create({
+        data: {
+          parentId: raw.parentId,
+          totalAmount: new Decimal(raw.totalAmount),
+          receiptNumber,
+          date: receiptDateNorm,
+          notes,
+          fromMonth: raw.month,
+          fromYear: raw.year,
+          toMonth: raw.month,
+          toYear: raw.year,
+        }
+      });
+
+      const creations = amountsToApply
         .filter((a) => a.amount > 0)
         .map(async ({ paymentId, amount }) => {
           const p = payments.find((x) => x.id === paymentId)!;
@@ -209,7 +213,20 @@ export async function POST(req: NextRequest) {
           const dueDate = p.balanceDueDate ? new Date(p.balanceDueDate) : null;
           if (dueDate) dueDate.setHours(0, 0, 0, 0);
           const resetDueDate = dueDate && receiptDateNorm >= dueDate;
-          return prisma.payment.update({
+
+          // Create Receipt
+          await tx.receipt.create({
+            data: {
+              paymentId,
+              receiptBatchId: batch.id,
+              amount: new Decimal(amount),
+              receiptNumber: receiptNumber || undefined,
+              date: receiptDateNorm,
+              notes: notes || undefined,
+            },
+          });
+
+          return tx.payment.update({
             where: { id: paymentId },
             data: {
               amountPaid: new Decimal(newAmountPaid),
@@ -217,12 +234,15 @@ export async function POST(req: NextRequest) {
               ...(resetDueDate ? { balanceDueDate: null } : {}),
             },
           });
-        }),
-    );
+        });
 
-    const receiptsCreated = amountsToApply.filter((a) => a.amount > 0).length;
+      await Promise.all(creations);
+      return { receiptBatchId: batch.id, receiptsCreated: amountsToApply.filter((a) => a.amount > 0).length };
+    });
+
     return NextResponse.json({
       created: receiptsCreated,
+      receiptBatchId,
       totalAmount: raw.totalAmount,
       month: raw.month,
       year: raw.year,

@@ -40,6 +40,19 @@ export async function POST(req: NextRequest) {
   const canViewFee = session?.user?.id ? await hasPermission(session.user.id, 'students.fee_viewer') : false;
   try {
     const raw = createSchema.parse(await req.json());
+    
+    if (raw.parentId) {
+      const existing = await prisma.student.findFirst({
+        where: {
+          name: { equals: raw.name, mode: 'insensitive' },
+          parentId: raw.parentId,
+        }
+      });
+      if (existing) {
+        return NextResponse.json({ error: 'A student with this name is already registered for this parent.' }, { status: 400 });
+      }
+    }
+
     const feeVal = canViewFee && raw.fee != null ? raw.fee : undefined;
     const payload = {
       name: raw.name,
