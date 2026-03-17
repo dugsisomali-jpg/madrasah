@@ -16,6 +16,7 @@ import {
   Banknote,
   BookMarked,
   Wallet,
+  ClipboardCheck,
 } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 
@@ -28,6 +29,7 @@ const navItems: { href: string; label: string; icon: React.ComponentType<{ class
   { href: '/receivables', label: 'Receivables', icon: Wallet },
   { href: '/exams', label: 'Exams', icon: FileCheck },
   { href: '/subjects', label: 'Subjects', icon: BookMarked },
+  { href: '/attendance', label: 'Attendance', icon: ClipboardCheck },
   { href: '/user-management', label: 'User Management', icon: Shield },
 ];
 

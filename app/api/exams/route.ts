@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
-import { requireAuth, shouldFilterMemorizationByTeacher, isParentRole } from '@/lib/auth-utils';
+import { requireAuth, shouldFilterMemorizationByTeacher, isParentRole, hasPermission } from '@/lib/auth-utils';
 
 const createSchema = z.object({
   studentId: z.string(),
@@ -17,7 +17,12 @@ const createSchema = z.object({
 export async function POST(req: NextRequest) {
   const { session, error: authError } = await requireAuth();
   if (authError) return authError;
-  const filterByTeacher = session?.user?.id ? await shouldFilterMemorizationByTeacher(session.user.id) : false;
+  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const canManage = await hasPermission(session.user.id, 'exams.manage');
+  if (!canManage) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+
+  const filterByTeacher = await shouldFilterMemorizationByTeacher(session.user.id);
   try {
     const data = createSchema.parse(await req.json());
     if (filterByTeacher && session?.user?.id) {

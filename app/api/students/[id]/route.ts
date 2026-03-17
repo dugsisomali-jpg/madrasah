@@ -12,6 +12,10 @@ const updateSchema = z.object({
   teacherId: z.string().optional().nullable(),
   address: z.string().optional(),
   imagePath: z.string().optional().nullable(),
+  status: z.enum(['ACTIVE', 'INACTIVE', 'GRADUATED', 'DROPPED']).optional(),
+  enrollmentDate: z.string().optional().nullable(),
+  emergencyContactName: z.string().optional().nullable(),
+  emergencyContactPhone: z.string().optional().nullable(),
   fee: z.union([z.number(), z.string()]).optional().nullable().transform((v) => {
     if (v === '' || v == null) return null;
     const n = Number(v);
@@ -54,10 +58,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const { session, error: authError } = await requireAuth();
   if (authError) return authError;
   const canEdit = session?.user?.id
-    ? (await hasPermission(session.user.id, 'students.create')) || (await hasPermission(session.user.id, 'students.manage'))
+    ? (await hasPermission(session.user.id, 'students.update')) || (await hasPermission(session.user.id, 'students.manage'))
     : false;
   if (!canEdit) {
-    return NextResponse.json({ error: 'Forbidden: you need students.create or students.manage permission' }, { status: 403 });
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
   const { id } = await params;
   const filterByTeacher = session?.user?.id ? await shouldFilterMemorizationByTeacher(session.user.id) : false;
@@ -80,6 +84,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     if (raw.teacherId !== undefined) data.teacherId = raw.teacherId || null;
     if (raw.address !== undefined) data.address = raw.address || null;
     if (raw.imagePath !== undefined) data.imagePath = raw.imagePath || null;
+    if (raw.status !== undefined) data.status = raw.status;
+    if (raw.enrollmentDate !== undefined) data.enrollmentDate = raw.enrollmentDate ? new Date(raw.enrollmentDate) : null;
+    if (raw.emergencyContactName !== undefined) data.emergencyContactName = raw.emergencyContactName || null;
+    if (raw.emergencyContactPhone !== undefined) data.emergencyContactPhone = raw.emergencyContactPhone || null;
     if (canViewFee && raw.fee !== undefined) data.fee = raw.fee;
 
     const student = await prisma.student.update({
@@ -94,5 +102,22 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   } catch (err) {
     if (err instanceof z.ZodError) return NextResponse.json({ error: err.errors }, { status: 400 });
     return NextResponse.json({ error: 'Failed to update student' }, { status: 500 });
+  }
+}
+
+export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { session, error: authError } = await requireAuth();
+  if (authError) return authError;
+  const canDelete = session?.user?.id
+    ? (await hasPermission(session.user.id, 'students.delete')) || (await hasPermission(session.user.id, 'students.manage'))
+    : false;
+  if (!canDelete) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+
+  const { id } = await params;
+  try {
+    await prisma.student.delete({ where: { id } });
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    return NextResponse.json({ error: 'Failed to delete student' }, { status: 500 });
   }
 }

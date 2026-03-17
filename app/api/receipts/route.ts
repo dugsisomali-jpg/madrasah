@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
     if (months.length === 0) return NextResponse.json({ error: 'Invalid month range' }, { status: 400 });
 
     const feePerMonth = toNum(student.fee);
-    const allPayments: { id: string; month: number; year: number; totalDue: number; discount: number; amountPaid: number }[] = [];
+    const allPayments: { id: string; month: number; year: number; totalDue: number; discount: number; amountPaid: number; balanceDueDate: Date | null }[] = [];
     let carry = 0;
     const firstMonth = months[0];
     const prevOfFirstMonth = firstMonth.month === 1 ? 12 : firstMonth.month - 1;

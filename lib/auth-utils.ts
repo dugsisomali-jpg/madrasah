@@ -24,7 +24,11 @@ export async function hasPermission(userId: string, permissionName: string): Pro
   const fromRoles = user.roles.flatMap((r) => r.permissions.map((p) => p.name));
   const fromDirect = user.directPermissions.map((p) => p.name);
   const allPerms = [...fromRoles, ...fromDirect].map((n) => (n || '').toLowerCase());
-  return allPerms.includes(permissionName.toLowerCase());
+  return (
+    allPerms.includes(permissionName.toLowerCase()) ||
+    allPerms.includes('manage.system') ||
+    allPerms.includes('system.manage')
+  );
 }
 
 /** True if current user should only see memorization records they recorded. Admins see all; everyone else (teachers, users with no role) sees only their own. */

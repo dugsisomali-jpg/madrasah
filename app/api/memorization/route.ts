@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
-import { requireAuth, shouldFilterMemorizationByTeacher, isParentRole } from '@/lib/auth-utils';
+import { requireAuth, shouldFilterMemorizationByTeacher, isParentRole, hasPermission } from '@/lib/auth-utils';
 import { MemorizationType } from '@prisma/client';
 
 const createSchema = z
@@ -32,8 +32,13 @@ const listSchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
-  const { error: authError } = await requireAuth();
+  const { session, error: authError } = await requireAuth();
   if (authError) return authError;
+  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const canManage = await hasPermission(session.user.id, 'memorization.manage');
+  if (!canManage) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+
   try {
     const raw = await req.json();
     console.log('[memorization] POST payload:', JSON.stringify(raw));
@@ -59,6 +64,10 @@ export async function POST(req: NextRequest) {
 export async function GET(req: NextRequest) {
   const { session, error: authError } = await requireAuth();
   if (authError) return authError;
+  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const canRead = await hasPermission(session.user.id, 'memorization.read');
+  if (!canRead) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   try {
     const { searchParams } = new URL(req.url);
     const params = listSchema.parse(Object.fromEntries(searchParams));

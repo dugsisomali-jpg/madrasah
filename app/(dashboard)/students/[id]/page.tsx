@@ -16,6 +16,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
   const studentJson = {
     ...student,
     dateOfBirth: student.dateOfBirth?.toISOString?.() ?? student.dateOfBirth,
+    fee: student.fee ? Number(student.fee) : null,
   };
 
   return <StudentDetailContent student={studentJson} />;

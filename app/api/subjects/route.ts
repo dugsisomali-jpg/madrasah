@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
-import { requireAuth } from '@/lib/auth-utils';
+import { requireAuth, hasPermission } from '@/lib/auth-utils';
 
 const createSchema = z.object({
   name: z.string().min(1),
@@ -11,8 +11,13 @@ const createSchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
-  const { error: authError } = await requireAuth();
+  const { session, error: authError } = await requireAuth();
   if (authError) return authError;
+  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const canManage = await hasPermission(session.user.id, 'subjects.manage');
+  if (!canManage) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+
   try {
     const parsed = createSchema.parse(await req.json());
     const id = `subj-${randomUUID()}`;
@@ -38,8 +43,13 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET() {
-  const { error: authError } = await requireAuth();
+  const { session, error: authError } = await requireAuth();
   if (authError) return authError;
+  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const canRead = await hasPermission(session.user.id, 'subjects.read');
+  if (!canRead) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+
   const subjects = await prisma.$queryRaw<Array<{ id: string; name: string; nameAr: string | null; description: string | null }>>`
     SELECT id, name, "nameAr", description FROM "Subject" ORDER BY name ASC
   `;

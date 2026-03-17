@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { z } from 'zod';
 import bcrypt from 'bcryptjs';
-import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { requireAuth, hasPermission } from '@/lib/auth-utils';
 
 const createSchema = z.object({
   username: z.string().min(1),
@@ -12,8 +12,13 @@ const createSchema = z.object({
 });
 
 export async function GET() {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const { session, error: authError } = await requireAuth();
+  if (authError) return authError;
+  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const canRead = await hasPermission(session.user.id, 'users.read');
+  if (!canRead) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+
   try {
     const users = await prisma.user.findMany({
       orderBy: { username: 'asc' },
@@ -39,8 +44,12 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const { session, error: authError } = await requireAuth();
+  if (authError) return authError;
+  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const canManage = await hasPermission(session.user.id, 'users.manage');
+  if (!canManage) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   try {
     const data = createSchema.parse(await req.json());

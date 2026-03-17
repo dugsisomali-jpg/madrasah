@@ -80,7 +80,7 @@ export async function POST(req: NextRequest) {
         })
     );
 
-    const allPayments: { id: string; studentId: string; totalDue: number; discount: number; amountPaid: number }[] = [];
+    const allPayments: { id: string; studentId: string; totalDue: number; discount: number; amountPaid: number; balanceDueDate: Date | null }[] = [];
     const studentsWithPayment = new Set(existingPayments.map((p) => p.studentId));
     let carry = 0;
     const prevMonth = raw.month === 1 ? 12 : raw.month - 1;
@@ -118,7 +118,7 @@ export async function POST(req: NextRequest) {
         totalDue: toNum(payment.totalDue),
         discount: toNum((payment as { discount?: unknown }).discount),
         amountPaid: toNum(payment.amountPaid),
-        balanceDueDate: (payment as { balanceDueDate?: Date | null }).balanceDueDate ?? null,
+        balanceDueDate: payment.balanceDueDate ?? null,
       });
     }
 
@@ -153,43 +153,34 @@ export async function POST(req: NextRequest) {
       return { ...p, balance };
     });
     const totalBalance = paymentsWithBalance.reduce((sum, p) => sum + p.balance, 0);
-
-    const paidInFull = raw.totalAmount >= amountAfterDiscount - 0.01;
     const cashToApply = raw.totalAmount;
-    const discountToApply = paidInFull ? discount : 0;
+    const discountToApply = discount;
 
     const amountsToApply: { paymentId: string; amount: number }[] = [];
     const discountsToApply: { paymentId: string; discount: number }[] = [];
-    if (totalBalance <= 0) {
-    } else if (paidInFull && discountToApply > 0) {
-      let cashAlloc = 0;
-      let discountAlloc = 0;
+
+    let cashAllocated = 0;
+    let discountAllocated = 0;
+
+    if (totalBalance > 0) {
       for (let i = 0; i < paymentsWithBalance.length; i++) {
         const p = paymentsWithBalance[i];
         const isLast = i === paymentsWithBalance.length - 1;
         const ratio = p.balance / totalBalance;
-        const cash = isLast ? Math.round((cashToApply - cashAlloc) * 100) / 100 : Math.round(cashToApply * ratio * 100) / 100;
-        const disc = isLast ? Math.round((discountToApply - discountAlloc) * 100) / 100 : Math.round(discountToApply * ratio * 100) / 100;
-        const cashCapped = Math.min(Math.max(0, cash), p.balance, cashToApply - cashAlloc);
-        const discCapped = Math.min(Math.max(0, disc), p.balance - cashCapped, discountToApply - discountAlloc);
-        amountsToApply.push({ paymentId: p.id, amount: cashCapped });
-        discountsToApply.push({ paymentId: p.id, discount: discCapped });
-        cashAlloc += cashCapped;
-        discountAlloc += discCapped;
-      }
-    } else if (cashToApply >= totalBalance - 0.01) {
-      paymentsWithBalance.forEach((p) => amountsToApply.push({ paymentId: p.id, amount: p.balance }));
-    } else {
-      let allocated = 0;
-      for (let i = 0; i < paymentsWithBalance.length; i++) {
-        const p = paymentsWithBalance[i];
-        const isLast = i === paymentsWithBalance.length - 1;
-        const amount = isLast
-          ? Math.round((cashToApply - allocated) * 100) / 100
-          : Math.round((cashToApply * (p.balance / totalBalance)) * 100) / 100;
-        const capped = Math.min(Math.max(0, amount), p.balance, cashToApply - allocated);
-        amountsToApply.push({ paymentId: p.id, amount: capped });
-        allocated += capped;
+
+        // Calculate proportions
+        let cash = isLast ? Math.round((cashToApply - cashAllocated) * 100) / 100 : Math.round(cashToApply * ratio * 100) / 100;
+        let disc = isLast ? Math.round((discountToApply - discountAllocated) * 100) / 100 : Math.round(discountToApply * ratio * 100) / 100;
+
+        // Cap to ensure we don't over-apply
+        cash = Math.min(Math.max(0, cash), p.balance, Math.max(0, Math.round((cashToApply - cashAllocated) * 100) / 100));
+        disc = Math.min(Math.max(0, disc), p.balance - cash, Math.max(0, Math.round((discountToApply - discountAllocated) * 100) / 100));
+
+        amountsToApply.push({ paymentId: p.id, amount: cash });
+        discountsToApply.push({ paymentId: p.id, discount: disc });
+
+        cashAllocated += cash;
+        discountAllocated += disc;
       }
     }
 
@@ -215,7 +206,7 @@ export async function POST(req: NextRequest) {
           const newAmountPaid = p.amountPaid + amount;
           const discRow = discountsToApply.find((d) => d.paymentId === paymentId);
           const newDiscount = p.discount + (discRow?.discount ?? 0);
-          const dueDate = (p as { balanceDueDate?: Date | null }).balanceDueDate ? new Date((p as { balanceDueDate: Date }).balanceDueDate) : null;
+          const dueDate = p.balanceDueDate ? new Date(p.balanceDueDate) : null;
           if (dueDate) dueDate.setHours(0, 0, 0, 0);
           const resetDueDate = dueDate && receiptDateNorm >= dueDate;
           return prisma.payment.update({

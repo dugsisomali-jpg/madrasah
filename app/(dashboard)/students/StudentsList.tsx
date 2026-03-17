@@ -17,7 +17,14 @@ import {
   MapPin,
   Phone,
   Calendar,
+  Trash2,
+  CheckCircle2,
+  XCircle,
+  GraduationCap,
+  AlertCircle,
 } from 'lucide-react';
+import Swal from 'sweetalert2';
+import { useSession } from 'next-auth/react';
 
 type ParentUser = { id: string; username: string; name?: string | null; roles?: { name: string }[] };
 type TeacherUser = { id: string; username: string; name?: string | null };
@@ -30,6 +37,10 @@ type Student = {
   address?: string | null;
   imagePath?: string | null;
   fee?: number | string | null;
+  status: 'ACTIVE' | 'INACTIVE' | 'GRADUATED' | 'DROPPED';
+  enrollmentDate?: string | null;
+  emergencyContactName?: string | null;
+  emergencyContactPhone?: string | null;
   parent?: ParentUser | null;
   teacherId?: string | null;
   teacher?: TeacherUser | null;
@@ -109,16 +120,37 @@ function StudentAvatar({
   );
 }
 
+function StatusBadge({ status }: { status: Student['status'] }) {
+  const configs = {
+    ACTIVE: { cls: 'bg-emerald-100 text-emerald-700 border-emerald-200', icon: CheckCircle2, label: 'Active' },
+    INACTIVE: { cls: 'bg-slate-100 text-slate-700 border-slate-200', icon: XCircle, label: 'Inactive' },
+    GRADUATED: { cls: 'bg-blue-100 text-blue-700 border-blue-200', icon: GraduationCap, label: 'Graduated' },
+    DROPPED: { cls: 'bg-red-100 text-red-700 border-red-200', icon: AlertCircle, label: 'Dropped' },
+  };
+  const config = configs[status] || configs.ACTIVE;
+  const Icon = config.icon;
+  return (
+    <span className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-medium ${config.cls}`}>
+      <Icon className="h-3 w-3" />
+      {config.label}
+    </span>
+  );
+}
+
 function StudentCard({
   student: s,
   onEdit,
+  onDelete,
   canViewFee,
   canEdit,
+  canDelete,
 }: {
   student: Student;
   onEdit: (s: Student) => void;
+  onDelete: (id: string) => void;
   canViewFee?: boolean;
   canEdit?: boolean;
+  canDelete?: boolean;
 }) {
   return (
     <div className="group relative flex items-stretch overflow-hidden rounded-xl border border-border bg-card shadow-sm transition-all hover:shadow-md hover:border-border/80">
@@ -127,14 +159,13 @@ function StudentCard({
       </div>
       <div className="min-w-0 flex-1 flex flex-col justify-between p-5">
         <div>
-          <h3 className="font-semibold text-foreground">{s.name}</h3>
-          {s.motherName && (
-            <p className="text-sm text-muted-foreground">{s.motherName}</p>
-          )}
-          <div className="mt-1.5 flex items-center gap-1.5">
-            <span className="size-1.5 rounded-full bg-destructive" />
-            <span className="text-xs text-muted-foreground">Student</span>
+          <h3 className="font-semibold text-foreground truncate">{s.name}</h3>
+          <div className="mt-1 flex flex-wrap items-center gap-2">
+            <StatusBadge status={s.status} />
           </div>
+          {s.motherName && (
+            <p className="mt-1.5 text-xs text-muted-foreground truncate">M: {s.motherName}</p>
+          )}
           {s.dateOfBirth && (
             <p className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
               <Calendar className="h-3.5 w-3.5 shrink-0" />
@@ -158,16 +189,28 @@ function StudentCard({
           )}
         </div>
         <div className="mt-3 flex items-center justify-between gap-2">
-          {canEdit && (
-            <button
-              type="button"
-              onClick={() => onEdit(s)}
-              className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-              aria-label="Edit"
-            >
-              <Pencil className="h-4 w-4" />
-            </button>
-          )}
+          <div className="flex items-center gap-1">
+            {canEdit && (
+              <button
+                type="button"
+                onClick={() => onEdit(s)}
+                className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-emerald-600"
+                title="Edit"
+              >
+                <Pencil className="h-4 w-4" />
+              </button>
+            )}
+            {canDelete && (
+              <button
+                type="button"
+                onClick={() => onDelete(s.id)}
+                className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-red-50 hover:text-red-600"
+                title="Delete"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            )}
+          </div>
           <Link
             href={`/students/${s.id}`}
             className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-emerald-700"
@@ -182,6 +225,7 @@ function StudentCard({
 }
 
 function StudentsListInner() {
+  const { data: session, status: sessionStatus } = useSession();
   const [students, setStudents] = useState<Student[]>([]);
   const [parents, setParents] = useState<ParentUser[]>([]);
   const [teachers, setTeachers] = useState<TeacherUser[]>([]);
@@ -205,6 +249,7 @@ function StudentsListInner() {
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [studentsLoading, setStudentsLoading] = useState(true);
+  const [canDelete, setCanDelete] = useState(false);
   const [form, setForm] = useState({
     name: '',
     motherName: '',
@@ -215,6 +260,10 @@ function StudentsListInner() {
     address: '',
     imagePath: '',
     fee: '',
+    status: 'ACTIVE' as Student['status'],
+    enrollmentDate: new Date().toISOString().slice(0, 10),
+    emergencyContactName: '',
+    emergencyContactPhone: '',
   });
 
   const load = useCallback(() => {
@@ -287,18 +336,26 @@ function StudentsListInner() {
   }, []);
 
   useEffect(() => {
-    fetch('/api/auth/permissions')
-      .then((r) => r.json())
-      .then((data) => {
-        const perms = Array.isArray(data.permissions) ? data.permissions : [];
-        setCanViewFee(perms.includes('students.fee_viewer'));
-        setCanCreate(perms.includes('students.create') || perms.includes('students.manage'));
-      })
-      .catch(() => {
-        setCanViewFee(false);
-        setCanCreate(false);
-      });
-  }, []);
+    if (sessionStatus === 'authenticated') {
+      fetch('/api/auth/permissions')
+        .then((r) => r.json())
+        .then((data) => {
+          const perms = Array.isArray(data.permissions) 
+            ? data.permissions.map((p: string) => (p || '').toLowerCase().trim()) 
+            : [];
+          const isMaster = perms.includes('manage.system') || perms.includes('system.manage');
+          setCanViewFee(isMaster || perms.includes('students.fee_viewer'));
+          setCanCreate(isMaster || perms.includes('students.create') || perms.includes('students.manage'));
+          setCanDelete(isMaster || perms.includes('students.delete') || perms.includes('students.manage'));
+        })
+        .catch((err) => {
+          console.error('Failed to fetch permissions:', err);
+          setCanViewFee(false);
+          setCanCreate(false);
+          setCanDelete(false);
+        });
+    }
+  }, [sessionStatus]);
 
   const resetForm = () => {
     setForm({
@@ -311,6 +368,10 @@ function StudentsListInner() {
       address: '',
       imagePath: '',
       fee: '',
+      status: 'ACTIVE' as Student['status'],
+      enrollmentDate: new Date().toISOString().slice(0, 10),
+      emergencyContactName: '',
+      emergencyContactPhone: '',
     });
     setParentSearch('');
     setEditStudent(null);
@@ -334,6 +395,10 @@ function StudentsListInner() {
       address: s.address ?? '',
       imagePath: s.imagePath ?? '',
       fee: s.fee != null ? String(s.fee) : '',
+      status: s.status,
+      enrollmentDate: s.enrollmentDate ? String(s.enrollmentDate).slice(0, 10) : '',
+      emergencyContactName: s.emergencyContactName ?? '',
+      emergencyContactPhone: s.emergencyContactPhone ?? '',
     });
     setParentSearch(s.parent ? (s.parent.name || s.parent.username) : '');
   };
@@ -384,9 +449,17 @@ function StudentsListInner() {
         fee: form.fee ? Number(form.fee) : undefined,
       }),
     })
-      .then(() => {
+      .then(async (res) => {
+        if (!res.ok) {
+          const d = await res.json();
+          throw new Error(d.error || 'Failed to create student');
+        }
+        Swal.fire({ icon: 'success', title: 'Created', text: 'Student created successfully', timer: 2000, showConfirmButton: false });
         resetForm();
         load();
+      })
+      .catch((err) => {
+        Swal.fire({ icon: 'error', title: 'Error', text: err.message });
       })
       .finally(() => setLoading(false));
   };
@@ -400,18 +473,52 @@ function StudentsListInner() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         ...form,
-        dateOfBirth: form.dateOfBirth || undefined,
+        dateOfBirth: form.dateOfBirth || null,
         parentId: form.parentId || null,
         teacherId: form.teacherId || null,
         imagePath: form.imagePath || null,
         fee: form.fee ? Number(form.fee) : null,
+        enrollmentDate: form.enrollmentDate || null,
       }),
     })
-      .then(() => {
+      .then(async (res) => {
+        if (!res.ok) {
+          const d = await res.json();
+          throw new Error(d.error || 'Failed to update student');
+        }
+        Swal.fire({ icon: 'success', title: 'Updated', text: 'Student updated successfully', timer: 2000, showConfirmButton: false });
         resetForm();
         load();
       })
+      .catch((err) => {
+        Swal.fire({ icon: 'error', title: 'Error', text: err.message });
+      })
       .finally(() => setLoading(false));
+  };
+
+  const handleDelete = async (id: string) => {
+    const result = await Swal.fire({
+      title: 'Are you sure?',
+      text: "You won't be able to revert this!",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Yes, delete it!',
+    });
+    if (!result.isConfirmed) return;
+
+    try {
+      const res = await fetch(`/api/students/${id}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const d = await res.json();
+        throw new Error(d.error || 'Failed to delete');
+      }
+      Swal.fire('Deleted!', 'Student has been deleted.', 'success');
+      load();
+    } catch (err: any) {
+      Swal.fire('Error', err.message, 'error');
+    }
   };
 
   const selectParent = (p: ParentUser) => {
@@ -546,6 +653,46 @@ function StudentsListInner() {
               />
             </div>
           )}
+          <div>
+            <label className="mb-1.5 block text-sm font-medium">Status</label>
+            <select
+              value={form.status}
+              onChange={(e) => setForm((f) => ({ ...f, status: e.target.value as Student['status'] }))}
+              className={inputCls}
+            >
+              <option value="ACTIVE">Active</option>
+              <option value="INACTIVE">Inactive</option>
+              <option value="GRADUATED">Graduated</option>
+              <option value="DROPPED">Dropped</option>
+            </select>
+          </div>
+          <div>
+            <label className="mb-1.5 block text-sm font-medium">Enrollment Date</label>
+            <input
+              type="date"
+              value={form.enrollmentDate}
+              onChange={(e) => setForm((f) => ({ ...f, enrollmentDate: e.target.value }))}
+              className={inputCls}
+            />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-sm font-medium">Emergency Contact Name</label>
+            <input
+              value={form.emergencyContactName}
+              onChange={(e) => setForm((f) => ({ ...f, emergencyContactName: e.target.value }))}
+              className={inputCls}
+              placeholder="Full name"
+            />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-sm font-medium">Emergency Contact Phone</label>
+            <input
+              value={form.emergencyContactPhone}
+              onChange={(e) => setForm((f) => ({ ...f, emergencyContactPhone: e.target.value }))}
+              className={inputCls}
+              placeholder="+XXX..."
+            />
+          </div>
           <div className="sm:col-span-2">
             <label className="mb-1.5 block text-sm font-medium">Address</label>
             <input
@@ -729,7 +876,15 @@ function StudentsListInner() {
               <StudentCardSkeleton key={i} />
             ))
           : students.map((s) => (
-              <StudentCard key={s.id} student={s} onEdit={openEdit} canViewFee={canViewFee} canEdit={canCreate} />
+              <StudentCard
+                key={s.id}
+                student={s}
+                onEdit={openEdit}
+                onDelete={handleDelete}
+                canViewFee={canViewFee}
+                canEdit={canCreate}
+                canDelete={canDelete}
+              />
             ))}
       </div>
       {/* Pagination */}

@@ -14,9 +14,13 @@ const createSchema = z.object({
   motherPhone: z.string().optional(),
   parentId: z.string().optional().nullable(),
   teacherId: z.string().optional().nullable(),
-  dateOfBirth: z.string().optional(),
-  address: z.string().optional(),
-  imagePath: z.string().optional(),
+  dateOfBirth: z.string().optional().nullable(),
+  address: z.string().optional().nullable(),
+  imagePath: z.string().optional().nullable(),
+  status: z.enum(['ACTIVE', 'INACTIVE', 'GRADUATED', 'DROPPED']).optional().default('ACTIVE'),
+  enrollmentDate: z.string().optional().nullable(),
+  emergencyContactName: z.string().optional().nullable(),
+  emergencyContactPhone: z.string().optional().nullable(),
   fee: z.union([z.number(), z.string()]).optional().nullable().transform((v) => {
     if (v === '' || v == null) return undefined;
     const n = Number(v);
@@ -31,7 +35,7 @@ export async function POST(req: NextRequest) {
     ? (await hasPermission(session.user.id, 'students.create')) || (await hasPermission(session.user.id, 'students.manage'))
     : false;
   if (!canCreate) {
-    return NextResponse.json({ error: 'Forbidden: you need students.create or students.manage permission' }, { status: 403 });
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
   const canViewFee = session?.user?.id ? await hasPermission(session.user.id, 'students.fee_viewer') : false;
   try {
@@ -46,6 +50,10 @@ export async function POST(req: NextRequest) {
       dateOfBirth: raw.dateOfBirth ? new Date(raw.dateOfBirth) : undefined,
       address: raw.address || undefined,
       imagePath: raw.imagePath || undefined,
+      status: raw.status,
+      enrollmentDate: raw.enrollmentDate ? new Date(raw.enrollmentDate) : undefined,
+      emergencyContactName: raw.emergencyContactName || undefined,
+      emergencyContactPhone: raw.emergencyContactPhone || undefined,
       fee: feeVal,
     };
     const student = await prisma.student.create({

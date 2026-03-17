@@ -17,9 +17,16 @@ const permissions = [
   { name: 'students.create', resource: 'students', action: 'create', description: 'Create students' },
   { name: 'students.fee_viewer', resource: 'students', action: 'fee_viewer', description: 'View student fee amount' },
   { name: 'teachers.manage', resource: 'teachers', action: 'manage', description: 'Manage teachers' },
+  { name: 'teachers.read', resource: 'teachers', action: 'read', description: 'View teachers list' },
   { name: 'exams.manage', resource: 'exams', action: 'manage', description: 'Manage exam results' },
   { name: 'payments.manage', resource: 'payments', action: 'manage', description: 'Manage payments and receipts' },
   { name: 'payments.read', resource: 'payments', action: 'read', description: 'View payments' },
+  { name: 'attendance.manage', resource: 'attendance', action: 'manage', description: 'Manage student attendance' },
+  { name: 'attendance.read', resource: 'attendance', action: 'read', description: 'View attendance' },
+  { name: 'subjects.manage', resource: 'subjects', action: 'manage', description: 'Manage academic subjects' },
+  { name: 'subjects.read', resource: 'subjects', action: 'read', description: 'View subjects' },
+  { name: 'system.manage', resource: 'system', action: 'manage', description: 'Master administrator privilege' },
+  { name: 'manage.system', resource: 'system', action: 'manage', description: 'Highest system-wide privilege' },
 ];
 
 const roles = [
@@ -31,25 +38,39 @@ const roles = [
 
 async function main() {
   for (const p of permissions) {
-    const existing = await prisma.permission.findUnique({ where: { name: p.name } });
-    if (!existing) await prisma.permission.create({ data: p });
+    await prisma.permission.upsert({
+      where: { name: p.name },
+      update: p,
+      create: p,
+    });
   }
   console.log('Seeded permissions');
 
   const allPerms = await prisma.permission.findMany();
   const adminPerms = allPerms;
-  const teacherPerms = allPerms.filter((p) => !['users.manage', 'roles.manage', 'permissions.manage'].includes(p.name));
-  const parentPerms = allPerms.filter((p) => p.action === 'read' || ['students.manage', 'students.create', 'students.fee_viewer', 'memorization.read'].includes(p.name));
-  const viewerPerms = allPerms.filter((p) => p.action === 'read' || p.name === 'memorization.read');
+  const teacherPerms = allPerms.filter((p) => 
+    ['memorization.manage', 'attendance.manage', 'students.manage', 'exams.manage', 'memorization.read', 'students.read', 'teachers.read', 'attendance.read', 'subjects.read'].includes(p.name)
+  );
+  const parentPerms = allPerms.filter((p) => 
+    p.action === 'read' || ['memorization.read', 'students.read', 'attendance.read', 'payments.read'].includes(p.name)
+  );
+  const viewerPerms = allPerms.filter((p) => 
+    p.action === 'read' || p.name.endsWith('.read')
+  );
 
   for (const r of roles) {
-    let role = await prisma.role.findUnique({ where: { name: r.name } });
-    if (!role) role = await prisma.role.create({ data: { name: r.name, description: r.description } });
+    let role = await prisma.role.upsert({
+      where: { name: r.name },
+      update: { description: r.description },
+      create: { name: r.name, description: r.description },
+    });
+
     const permIds =
       r.name === 'admin' ? adminPerms
       : r.name === 'teacher' ? teacherPerms
       : r.name === 'parent' ? parentPerms
       : viewerPerms;
+
     await prisma.role.update({
       where: { id: role.id },
       data: { permissions: { set: permIds.map((p) => ({ id: p.id })) } },
@@ -63,7 +84,7 @@ async function main() {
     if (adminUser) {
       await prisma.user.update({
         where: { id: adminUser.id },
-        data: { roles: { set: [{ id: adminRole.id }] } },
+        data: { roles: { connect: [{ id: adminRole.id }] } },
       });
       console.log('Assigned admin role to admin user');
     }

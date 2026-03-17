@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
-import { requireAuth } from '@/lib/auth-utils';
+import { requireAuth, hasPermission } from '@/lib/auth-utils';
 
 const createSchema = z.object({
   name: z.string().min(1),
@@ -9,8 +9,13 @@ const createSchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
-  const { error: authError } = await requireAuth();
+  const { session, error: authError } = await requireAuth();
   if (authError) return authError;
+  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const canManage = await hasPermission(session.user.id, 'roles.manage');
+  if (!canManage) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+
   try {
     const data = createSchema.parse(await req.json());
     const role = await prisma.role.create({ data });
@@ -22,8 +27,13 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET() {
-  const { error: authError } = await requireAuth();
+  const { session, error: authError } = await requireAuth();
   if (authError) return authError;
+  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const canRead = await hasPermission(session.user.id, 'roles.manage');
+  if (!canRead) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+
   const roles = await prisma.role.findMany({
     orderBy: { name: 'asc' },
     include: { permissions: true },
