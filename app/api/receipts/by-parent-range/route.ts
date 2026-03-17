@@ -6,10 +6,10 @@ import { Decimal } from '@prisma/client/runtime/library';
 
 const schema = z.object({
   parentId: z.string(),
-  fromMonth: z.number().int().min(1).max(12),
-  fromYear: z.number().int().min(2020).max(2100),
-  toMonth: z.number().int().min(1).max(12),
-  toYear: z.number().int().min(2020).max(2100),
+  fromMonth: z.number().int().min(1).max(12).optional(),
+  fromYear: z.number().int().min(2020).max(2100).optional(),
+  toMonth: z.number().int().min(1).max(12).optional(),
+  toYear: z.number().int().min(2020).max(2100).optional(),
   totalAmount: z.number().positive(),
   receiptNumber: z.string().optional(),
   date: z.string().refine((s) => !isNaN(new Date(s).getTime()), { message: 'Invalid date' }),
@@ -145,7 +145,7 @@ export async function POST(req: NextRequest) {
                 if (y > currentY + 5) break;
             }
         } else {
-            studentMonths = [...monthRange(raw.fromMonth, raw.fromYear, raw.toMonth, raw.toYear)];
+            studentMonths = [...monthRange(raw.fromMonth!, raw.fromYear!, raw.toMonth!, raw.toYear!)];
         }
 
         if (studentMonths.length === 0) continue;

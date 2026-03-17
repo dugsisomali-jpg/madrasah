@@ -348,11 +348,14 @@ export function PaymentsContent() {
           });
         } else {
           const err = await r.json().catch(() => ({}));
+          const errorMsg = typeof err?.error === 'object' ? JSON.stringify(err.error, null, 2) : (err?.error || 'Failed to add receipt');
+          const detailsMsg = typeof err?.details === 'object' ? JSON.stringify(err.details, null, 2) : (err?.details || '');
           const payloadStr = err?.payload ? `\n\nPayload: ${JSON.stringify(err.payload)}` : '';
+          
           Swal.fire({
             icon: 'error',
             title: 'Cannot add receipt',
-            text: `${err?.error || 'Failed to add receipt'}${err?.details ? `\n${err.details}` : ''}${payloadStr}`,
+            text: `${errorMsg}${detailsMsg ? `\n${detailsMsg}` : ''}${payloadStr}`,
           });
         }
       })
