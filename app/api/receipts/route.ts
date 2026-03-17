@@ -68,30 +68,59 @@ export async function POST(req: NextRequest) {
         if (isNaN(count) || count < 1) return NextResponse.json({ error: 'Invalid monthsCount' }, { status: 400 });
         
         const now = new Date();
-        let testM = now.getMonth() + 1;
-        let testY = now.getFullYear();
-        
-        // Look back for any unpaid balance
-        for (let i = 0; i < 6; i++) {
-            const pm = testM === 1 ? 12 : testM - 1;
-            const py = testM === 1 ? testY - 1 : testY;
-            const prev = await prisma.payment.findUnique({
-                where: { studentId_month_year: { studentId: raw.studentId, month: pm, year: py } }
-            });
-            if (prev) {
-                const bal = toNum(prev.totalDue) - toNum((prev as any).discount) - toNum(prev.amountPaid);
-                if (bal > 1) { testM = pm; testY = py; } else { break; }
+        const currentM = now.getMonth() + 1;
+        const currentY = now.getFullYear();
+
+        const latestPaid = await prisma.payment.findFirst({
+            where: { studentId: raw.studentId, amountPaid: { gt: 0 } },
+            orderBy: [{ year: 'desc' }, { month: 'desc' }],
+        });
+
+        let startM = currentM;
+        let startY = currentY;
+
+        if (latestPaid) {
+            const balance = toNum(latestPaid.totalDue) - toNum((latestPaid as any).discount) - toNum(latestPaid.amountPaid);
+            if (balance <= 1) {
+                startM = latestPaid.month + 1;
+                startY = latestPaid.year;
+                if (startM > 12) { startM = 1; startY++; }
             } else {
-                if (i > 3) break;
-                testM = pm; testY = py;
+                let testM = latestPaid.month;
+                let testY = latestPaid.year;
+                for (let i = 0; i < 12; i++) {
+                    const pm = testM === 1 ? 12 : testM - 1;
+                    const py = testM === 1 ? testY - 1 : testY;
+                    const prev = await prisma.payment.findUnique({
+                        where: { studentId_month_year: { studentId: raw.studentId, month: pm, year: py } }
+                    });
+                    if (prev) {
+                        const bal = toNum(prev.totalDue) - toNum((prev as any).discount) - toNum(prev.amountPaid);
+                        if (bal > 1) { testM = pm; testY = py; } else { break; }
+                    } else {
+                        if (i > 3) break;
+                        testM = pm; testY = py;
+                    }
+                }
+                startM = testM;
+                startY = testY;
+            }
+        } else {
+            const anyPayment = await prisma.payment.findFirst({
+                where: { studentId: raw.studentId },
+                orderBy: [{ year: 'asc' }, { month: 'asc' }],
+            });
+            if (anyPayment) {
+                startM = anyPayment.month;
+                startY = anyPayment.year;
             }
         }
 
         let foundCount = 0;
-        let m = testM, y = testY;
+        let m = startM, y = startY;
         while (foundCount < count) {
             const payment = await prisma.payment.findUnique({
-                where: { studentId_month_year: { studentId: raw.studentId, month: m, year: y } }
+                where: { studentId: raw.studentId, month: m, year: y }
             });
             const balance = payment ? toNum(payment.totalDue) - toNum((payment as any).discount) - toNum(payment.amountPaid) : toNum(student.fee);
             if (balance > 1) {

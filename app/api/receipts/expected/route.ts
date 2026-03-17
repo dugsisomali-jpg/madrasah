@@ -58,60 +58,75 @@ export async function GET(req: NextRequest) {
     if (isNaN(count) || count < 1) return NextResponse.json({ error: 'Invalid monthsCount' }, { status: 400 });
 
     const now = new Date();
-    let currentM = now.getMonth() + 1;
-    let currentY = now.getFullYear();
+    const currentM = now.getMonth() + 1;
+    const currentY = now.getFullYear();
     
-    // We look for the first month with a balance starting from current or previous (if previous has balance)
-    // Actually, let's look for the VERY first unpaid month in the system for this student
-    const firstEverUnpaid = await prisma.payment.findFirst({
-        where: { studentId },
-        orderBy: [{ year: 'asc' }, { month: 'asc' }],
+    // Smart Start Logic:
+    // 1. Find the MOST RECENT month that is FULLY PAID.
+    // 2. The range starts from the first month after that which has a balance.
+    
+    const latestPaid = await prisma.payment.findFirst({
+        where: { 
+            studentId,
+            amountPaid: { gt: 0 } // Must have some payment to be considered
+        },
+        orderBy: [{ year: 'desc' }, { month: 'desc' }],
     });
 
-    if (firstEverUnpaid) {
-        // If there are payments, check if the first one has balance
-        const balance = toNum(firstEverUnpaid.totalDue) - toNum((firstEverUnpaid as any).discount) - toNum(firstEverUnpaid.amountPaid);
-        if (balance <= 0) {
-            // Find the first one with balance
-            // This is slightly complex. Let's simplify: start from current month and go backwards until we find paid, then go forwards.
-            // Or just use the logic: Start from current month, if previous has balance, start from there.
-        }
-    }
+    let startM = currentM;
+    let startY = currentY;
 
-    // Simplified Smart Logic:
-    // 1. Find the earliest month that has a balance > 0 (including carry over from before it)
-    // 2. Or if none, the current month.
-    
-    let testM = currentM;
-    let testY = currentY;
-    
-    // Look back up to 12 months for any unpaid balance
-    for (let i = 0; i < 12; i++) {
-        const pm = testM === 1 ? 12 : testM - 1;
-        const py = testM === 1 ? testY - 1 : testY;
-        const prev = await prisma.payment.findUnique({
-            where: { studentId_month_year: { studentId, month: pm, year: py } }
-        });
-        if (prev) {
-            const bal = toNum(prev.totalDue) - toNum((prev as any).discount) - toNum(prev.amountPaid);
-            if (bal > 1) {
-                testM = pm;
-                testY = py;
-            } else {
-                break; // Found a fully paid month, stop looking back
-            }
+    if (latestPaid) {
+        const balance = toNum(latestPaid.totalDue) - toNum((latestPaid as any).discount) - toNum(latestPaid.amountPaid);
+        if (balance <= 1) {
+            // If the latest record is fully paid, start from the month AFTER it.
+            startM = latestPaid.month + 1;
+            startY = latestPaid.year;
+            if (startM > 12) { startM = 1; startY++; }
         } else {
-            // No payment record. Might be unpaid or just never created.
-            // For safety, let's stop looking back if we find no record beyond 3 months
-            if (i > 3) break;
-            testM = pm;
-            testY = py;
+            // If the latest record is NOT fully paid, we need to find the start of its "Unpaid Streak".
+            // Go backwards from this record until we find a fully paid month or hit a limit.
+            let testM = latestPaid.month;
+            let testY = latestPaid.year;
+            for (let i = 0; i < 12; i++) {
+                const pm = testM === 1 ? 12 : testM - 1;
+                const py = testM === 1 ? testY - 1 : testY;
+                const prev = await prisma.payment.findUnique({
+                    where: { studentId_month_year: { studentId, month: pm, year: py } }
+                });
+                if (prev) {
+                    const bal = toNum(prev.totalDue) - toNum((prev as any).discount) - toNum(prev.amountPaid);
+                    if (bal > 1) {
+                        testM = pm; testY = py;
+                    } else {
+                        break; // Found a barrier
+                    }
+                } else {
+                    // No record, but the system assumes if a later one is unpaid, this one might be too.
+                    // However, we shouldn't assume too far back. 
+                    if (i > 3) break;
+                    testM = pm; testY = py;
+                }
+            }
+            startM = testM;
+            startY = testY;
+        }
+    } else {
+        // No payments ever? Start from current or student creation?
+        // Let's look for any payment record at all
+        const anyPayment = await prisma.payment.findFirst({
+            where: { studentId },
+            orderBy: [{ year: 'asc' }, { month: 'asc' }],
+        });
+        if (anyPayment) {
+            startM = anyPayment.month;
+            startY = anyPayment.year;
         }
     }
 
     let foundCount = 0;
-    let m = testM;
-    let y = testY;
+    let m = startM;
+    let y = startY;
     
     while (foundCount < count) {
         const payment = await prisma.payment.findUnique({
@@ -120,7 +135,7 @@ export async function GET(req: NextRequest) {
         
         const balance = payment 
             ? toNum(payment.totalDue) - toNum((payment as any).discount) - toNum(payment.amountPaid)
-            : feePerMonth; // Use full fee if no record
+            : feePerMonth;
 
         if (balance > 1) {
             if (foundCount === 0) {
@@ -135,8 +150,6 @@ export async function GET(req: NextRequest) {
         
         m++;
         if (m > 12) { m = 1; y++; }
-        
-        // Safety break to avoid infinite loops
         if (y > currentY + 10) break;
     }
     unpaidCount = foundCount;

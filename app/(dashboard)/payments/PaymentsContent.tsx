@@ -297,6 +297,17 @@ export function PaymentsContent() {
     setRangeReceiptNotes(`Advance payment for ${MONTHS[fromM - 1]} ${fromY} - ${MONTHS[toM - 1]} ${toY}`);
   }, [JSON.stringify(computedRange)]);
 
+  const resetRangeForm = () => {
+    setRangeStudentId('');
+    setRangeParentId('');
+    setRangeMonthsCount('');
+    setRangeAmount('');
+    setRangeReceiptNumber('');
+    setRangeReceiptDate(new Date().toISOString().slice(0, 10));
+    setRangeReceiptNotes('');
+    setComputedRange(null);
+  };
+
   const handleAddRangeReceipt = (e: React.FormEvent) => {
     e.preventDefault();
     if (!computedRange || !rangeAmount || parseFloat(rangeAmount) <= 0) return;
@@ -324,13 +335,7 @@ export function PaymentsContent() {
         if (r.ok) {
           const data = await r.json();
           setRangeModalOpen(false);
-          setRangeStudentId('');
-          setRangeParentId('');
-          setRangeMonthsCount('');
-          setRangeAmount('');
-          setRangeReceiptNumber('');
-          setRangeReceiptDate(new Date().toISOString().slice(0, 10));
-          setRangeReceiptNotes('');
+          resetRangeForm();
           loadPayments();
           Swal.fire({
             icon: 'success',
@@ -1010,7 +1015,10 @@ export function PaymentsContent() {
         <>
           <div
             className="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-sm transition-all duration-300"
-            onClick={() => setRangeModalOpen(false)}
+            onClick={() => {
+              setRangeModalOpen(false);
+              resetRangeForm();
+            }}
             aria-hidden="true"
           />
           <div
@@ -1038,7 +1046,10 @@ export function PaymentsContent() {
                 <div className="relative flex gap-1">
                   <button
                     type="button"
-                    onClick={() => setRangeMode('single')}
+                    onClick={() => {
+                      setRangeMode('single');
+                      resetRangeForm();
+                    }}
                     className={`relative flex flex-1 items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold transition-all duration-300 ${rangeMode === 'single'
                       ? 'bg-card text-primary shadow-sm'
                       : 'text-muted-foreground hover:bg-muted hover:text-foreground'
@@ -1049,7 +1060,10 @@ export function PaymentsContent() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setRangeMode('parent')}
+                    onClick={() => {
+                      setRangeMode('parent');
+                      resetRangeForm();
+                    }}
                     className={`relative flex flex-1 items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold transition-all duration-300 ${rangeMode === 'parent'
                       ? 'bg-card text-primary shadow-sm'
                       : 'text-muted-foreground hover:bg-muted hover:text-foreground'
@@ -1196,7 +1210,10 @@ export function PaymentsContent() {
                 <div className="flex items-center gap-3 pt-4">
                   <button
                     type="button"
-                    onClick={() => setRangeModalOpen(false)}
+                    onClick={() => {
+                      setRangeModalOpen(false);
+                      resetRangeForm();
+                    }}
                     className="flex-1 rounded-2xl border border-slate-200 py-3 text-sm font-bold text-slate-600 transition-all hover:bg-muted active:scale-95"
                   >
                     Cancel
