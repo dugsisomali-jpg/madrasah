@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Swal from 'sweetalert2';
-import { Plus, Receipt, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Users, User, ExternalLink, CalendarRange, Loader2, UsersRound, Calendar } from 'lucide-react';
+import { Plus, Receipt, ChevronDown, Banknote, ChevronUp, ChevronLeft, ChevronRight, Users, User, ExternalLink, CalendarRange, Loader2, UsersRound, Calendar } from 'lucide-react';
 import { SearchableSelect } from '@/components/SearchableSelect';
 import {
   Table,
@@ -65,9 +65,12 @@ export function PaymentsContent() {
   const [receiptLoading, setReceiptLoading] = useState(false);
   const [canManage, setCanManage] = useState(false);
   const [rangeModalOpen, setRangeModalOpen] = useState(false);
+  const [rangeMode, setRangeMode] = useState<'single' | 'parent'>('single');
   const [rangeStudentId, setRangeStudentId] = useState('');
+  const [rangeParentId, setRangeParentId] = useState('');
   const [rangeMonthsCount, setRangeMonthsCount] = useState('');
   const [rangeAmount, setRangeAmount] = useState('');
+  const [computedRange, setComputedRange] = useState<{ fromM: number; fromY: number; toM: number; toY: number } | null>(null);
   const [rangeReceiptNumber, setRangeReceiptNumber] = useState('');
   const [rangeReceiptDate, setRangeReceiptDate] = useState(new Date().toISOString().slice(0, 10));
   const [rangeReceiptNotes, setRangeReceiptNotes] = useState('');
@@ -187,13 +190,13 @@ export function PaymentsContent() {
   }, []);
 
   useEffect(() => {
-    if (parentModalOpen) {
+    if (parentModalOpen || (rangeModalOpen && rangeMode === 'parent')) {
       fetch('/api/users/parents?hasStudents=true')
         .then((r) => r.json())
         .then((data) => setParents(Array.isArray(data) ? data : []))
         .catch(() => setParents([]));
     }
-  }, [parentModalOpen]);
+  }, [JSON.stringify([parentModalOpen, rangeModalOpen, rangeMode])]);
 
   useEffect(() => {
     if (!parentId || !parentPeriod) {
@@ -245,91 +248,84 @@ export function PaymentsContent() {
 
   useEffect(() => {
     const n = parseInt(rangeMonthsCount, 10);
-    if (!rangeStudentId || !rangeMonthsCount || isNaN(n) || n < 1) {
+    if (!rangeMonthsCount || isNaN(n) || n < 1) {
       setRangeAmount('');
       setRangeAmountLoading(false);
       return;
     }
-    const currM = new Date().getMonth() + 1;
-    const currY = new Date().getFullYear();
-    const fromM = currM;
-    const fromY = currY;
-    const addMonths = n - 1;
-    const toM = ((fromM - 1 + addMonths) % 12) + 1;
-    const toY = fromY + Math.floor((fromM - 1 + addMonths) / 12);
+
+    if (rangeMode === 'single' && !rangeStudentId) {
+      setRangeAmount('');
+      setRangeAmountLoading(false);
+      return;
+    }
+
+    if (rangeMode === 'parent' && !rangeParentId) {
+      setRangeAmount('');
+      setRangeAmountLoading(false);
+      return;
+    }
+
     setRangeAmountLoading(true);
+
+    const endpoint = rangeMode === 'single' ? '/api/receipts/expected' : '/api/receipts/expected/by-parent';
     const params = new URLSearchParams({
-      studentId: rangeStudentId,
-      fromMonth: String(fromM),
-      fromYear: String(fromY),
-      toMonth: String(toM),
-      toYear: String(toY),
+      ...(rangeMode === 'single' ? { studentId: rangeStudentId } : { parentId: rangeParentId }),
+      monthsCount: String(n),
     });
-    fetch(`/api/receipts/expected?${params}`)
+
+    fetch(`${endpoint}?${params}`)
       .then((r) => r.json())
       .then((data) => {
         const amount = data?.requiredAmount ?? 0;
         setRangeAmount(amount > 0 ? String(amount) : '');
+        setComputedRange(data?.range || null);
       })
-      .catch(() => setRangeAmount(''))
+      .catch(() => {
+        setRangeAmount('');
+        setComputedRange(null);
+      })
       .finally(() => setRangeAmountLoading(false));
-  }, [rangeStudentId, rangeMonthsCount]);
+  }, [JSON.stringify([rangeMode, rangeStudentId, rangeParentId, rangeMonthsCount])]);
 
   useEffect(() => {
-    const n = parseInt(rangeMonthsCount, 10);
-    if (!rangeMonthsCount || isNaN(n) || n < 1) {
+    if (!computedRange) {
       setRangeReceiptNotes('');
       return;
     }
-    const currM = new Date().getMonth() + 1;
-    const currY = new Date().getFullYear();
-    const fromM = currM;
-    const fromY = currY;
-    const addMonths = n - 1;
-    const toM = ((fromM - 1 + addMonths) % 12) + 1;
-    const toY = fromY + Math.floor((fromM - 1 + addMonths) / 12);
+    const { fromM, fromY, toM, toY } = computedRange;
     setRangeReceiptNotes(`Advance payment for ${MONTHS[fromM - 1]} ${fromY} - ${MONTHS[toM - 1]} ${toY}`);
-  }, [rangeMonthsCount]);
-
-  const getRangeFromMonths = (monthsCount: string) => {
-    const n = parseInt(monthsCount, 10);
-    if (!monthsCount || isNaN(n) || n < 1) return null;
-    const currM = new Date().getMonth() + 1;
-    const currY = new Date().getFullYear();
-    const fromM = currM;
-    const fromY = currY;
-    const addMonths = n - 1;
-    const toM = ((fromM - 1 + addMonths) % 12) + 1;
-    const toY = fromY + Math.floor((fromM - 1 + addMonths) / 12);
-    return { fromM, fromY, toM, toY };
-  };
+  }, [JSON.stringify(computedRange)]);
 
   const handleAddRangeReceipt = (e: React.FormEvent) => {
     e.preventDefault();
-    const range = getRangeFromMonths(rangeMonthsCount);
-    if (!rangeStudentId || !range || !rangeAmount || parseFloat(rangeAmount) <= 0) return;
-    const { fromM, fromY, toM, toY } = range;
+    if (!computedRange || !rangeAmount || parseFloat(rangeAmount) <= 0) return;
+    if (rangeMode === 'single' && !rangeStudentId) return;
+    if (rangeMode === 'parent' && !rangeParentId) return;
+
     setRangeLoading(true);
-    fetch('/api/receipts', {
+
+    const endpoint = rangeMode === 'single' ? '/api/receipts' : '/api/receipts/by-parent-range';
+    const body = {
+      ...(rangeMode === 'single' ? { studentId: rangeStudentId } : { parentId: rangeParentId }),
+      monthsCount: parseInt(rangeMonthsCount, 10),
+      totalAmount: parseFloat(rangeAmount),
+      receiptNumber: rangeReceiptNumber || undefined,
+      date: rangeReceiptDate,
+      notes: rangeReceiptNotes || undefined,
+    };
+
+    fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        studentId: rangeStudentId,
-        fromMonth: fromM,
-        fromYear: fromY,
-        toMonth: toM,
-        toYear: toY,
-        totalAmount: parseFloat(rangeAmount),
-        receiptNumber: rangeReceiptNumber || undefined,
-        date: rangeReceiptDate,
-        notes: rangeReceiptNotes || undefined,
-      }),
+      body: JSON.stringify(body),
     })
       .then(async (r) => {
         if (r.ok) {
           const data = await r.json();
           setRangeModalOpen(false);
           setRangeStudentId('');
+          setRangeParentId('');
           setRangeMonthsCount('');
           setRangeAmount('');
           setRangeReceiptNumber('');
@@ -339,9 +335,11 @@ export function PaymentsContent() {
           Swal.fire({
             icon: 'success',
             title: 'Receipt(s) added',
-            text: data.skipped > 0
-              ? `Created ${data.created} receipt(s) for ${data.months} month(s) (${data.skipped} already paid, skipped).`
-              : `Created ${data.created} receipt(s) for ${data.months} month(s) – ${rangeAmount} KES.`,
+            text: rangeMode === 'single'
+              ? (data.skipped > 0
+                ? `Created ${data.created} receipt(s) for ${data.months} month(s) (${data.skipped} already paid, skipped).`
+                : `Created ${data.created} receipt(s) for ${data.months} month(s) – ${rangeAmount} KES.`)
+              : `Created ${data.created} receipt(s) for ${data.studentCount} children over ${rangeMonthsCount} months – ${rangeAmount} KES.`,
           });
         } else {
           const err = await r.json().catch(() => ({}));
@@ -488,17 +486,6 @@ export function PaymentsContent() {
   const currentPage = Math.min(Math.max(1, page), totalPages);
   const startIdx = total === 0 ? 0 : (currentPage - 1) * perPage + 1;
   const endIdx = Math.min(currentPage * perPage, total);
-
-  const computedRange = (() => {
-    const n = parseInt(rangeMonthsCount, 10);
-    if (!rangeMonthsCount || isNaN(n) || n < 1) return null;
-    const fromM = currMonth;
-    const fromY = currYear;
-    const addMonths = n - 1;
-    const toM = ((fromM - 1 + addMonths) % 12) + 1;
-    const toY = fromY + Math.floor((fromM - 1 + addMonths) / 12);
-    return { rangeFrom: `${fromY}-${String(fromM).padStart(2, '0')}`, rangeTo: `${toY}-${String(toM).padStart(2, '0')}`, fromM, fromY, toM, toY };
-  })();
 
   return (
     <div className="space-y-6">
@@ -1021,107 +1008,227 @@ export function PaymentsContent() {
 
       {rangeModalOpen && (
         <>
-          <div className="fixed inset-0 z-50 bg-black/60" onClick={() => setRangeModalOpen(false)} aria-hidden="true" />
           <div
-            className="fixed left-1/2 top-1/2 z-50 w-full max-w-2xl -translate-x-1/2 -translate-y-1/2 rounded-xl border bg-card p-6 shadow-xl"
+            className="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-sm transition-all duration-300"
+            onClick={() => setRangeModalOpen(false)}
+            aria-hidden="true"
+          />
+          <div
+            className="fixed left-1/2 top-1/2 z-50 w-full max-w-2xl -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-3xl border border-white/20 bg-card/95 p-0 shadow-2xl backdrop-blur-xl transition-all dark:border-slate-800/50"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 className="text-lg font-semibold">Pay forward (range of months)</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Pay for coming months in advance. Select student, then enter number of months. Payment records will be created if needed.
-            </p>
-            <form onSubmit={handleAddRangeReceipt} className="mt-4 space-y-4">
-              <div>
-                <label className="mb-1.5 block text-sm font-medium">Student</label>
-                <SearchableSelect
-                  options={students.map((s) => ({
-                    value: s.id,
-                    label: `${s.name} (fee: ${n(s.fee).toLocaleString()} KES/month)`,
-                  }))}
-                  value={rangeStudentId}
-                  onChange={setRangeStudentId}
-                  placeholder="Select student"
-                  required
-                  className="w-full"
-                />
+            {/* Premium Header */}
+            <div className="relative overflow-hidden bg-gradient-to-br from-primary/10 via-primary/5 to-transparent px-8 py-6">
+              <div className="flex items-center gap-4">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/20">
+                  <CalendarRange className="h-6 w-6" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Pay forward</h2>
+                  <p className="text-sm font-medium text-muted-foreground">Advance payment for future months</p>
+                </div>
               </div>
-              <div>
-                <label className="mb-1.5 block text-sm font-medium">Number of months</label>
-                <input
-                  type="number"
-                  min={1}
-                  value={rangeMonthsCount}
-                  onChange={(e) => setRangeMonthsCount(e.target.value)}
-                  disabled={!rangeStudentId}
-                  required
-                  placeholder={rangeStudentId ? 'e.g. 3' : 'Select student first'}
-                  className={`${inputCls} ${!rangeStudentId ? 'cursor-not-allowed bg-muted opacity-60' : ''}`}
-                />
-                {computedRange && (
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Range: {MONTHS[computedRange.fromM - 1]} {computedRange.fromY} – {MONTHS[computedRange.toM - 1]} {computedRange.toY}
-                  </p>
+              {/* Decorative element */}
+              <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-primary/5 blur-2xl" />
+            </div>
+
+            <div className="px-8 py-6">
+              {/* Mode Toggle - Segmented Control Style */}
+              <div className="mb-8 rounded-2xl bg-muted/50 p-1.5 shadow-inner">
+                <div className="relative flex gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setRangeMode('single')}
+                    className={`relative flex flex-1 items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold transition-all duration-300 ${rangeMode === 'single'
+                      ? 'bg-card text-primary shadow-sm'
+                      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                      }`}
+                  >
+                    <User className={`h-4 w-4 transition-transform duration-300 ${rangeMode === 'single' ? 'scale-110' : ''}`} />
+                    Per student
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRangeMode('parent')}
+                    className={`relative flex flex-1 items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold transition-all duration-300 ${rangeMode === 'parent'
+                      ? 'bg-card text-primary shadow-sm'
+                      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                      }`}
+                  >
+                    <UsersRound className={`h-4 w-4 transition-transform duration-300 ${rangeMode === 'parent' ? 'scale-110' : ''}`} />
+                    Per parent
+                  </button>
+                </div>
+              </div>
+
+              <form onSubmit={handleAddRangeReceipt} className="space-y-6">
+                <div className="grid gap-6 sm:grid-cols-2">
+                  <div className="sm:col-span-1">
+                    <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-muted-foreground/80">
+                      {rangeMode === 'single' ? 'Select Student' : 'Select Parent'}
+                    </label>
+                    <div className="relative">
+                      {rangeMode === 'single' ? (
+                        <SearchableSelect
+                          options={students.map((s) => ({
+                            value: s.id,
+                            label: s.name,
+                          }))}
+                          value={rangeStudentId}
+                          onChange={setRangeStudentId}
+                          placeholder="Search student..."
+                          required={rangeMode === 'single'}
+                          className="w-full"
+                        />
+                      ) : (
+                        <SearchableSelect
+                          options={parents.map((p) => ({
+                            value: p.id,
+                            label: p.name || p.username || p.id,
+                          }))}
+                          value={rangeParentId}
+                          onChange={setRangeParentId}
+                          placeholder="Search parent..."
+                          required={rangeMode === 'parent'}
+                          className="w-full"
+                        />
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="sm:col-span-1">
+                    <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-muted-foreground/80">
+                      Duration
+                    </label>
+                    <div className="relative">
+                      <Calendar className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/60" />
+                      <input
+                        type="number"
+                        min={1}
+                        value={rangeMonthsCount}
+                        onChange={(e) => setRangeMonthsCount(e.target.value)}
+                        disabled={rangeMode === 'single' ? !rangeStudentId : !rangeParentId}
+                        required
+                        placeholder={rangeMode === 'single' ? "Months (e.g. 3)" : "Months..."}
+                        className={`${inputCls} pl-10 h-11 rounded-xl border-slate-200 focus:border-primary focus:ring-primary/20 ${(rangeMode === 'single' ? !rangeStudentId : !rangeParentId) ? 'cursor-not-allowed bg-muted/40' : ''
+                          }`}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Smart Calculation Card */}
+                {(rangeAmount || rangeAmountLoading || computedRange) && (
+                  <div className="relative overflow-hidden rounded-2xl border border-primary/10 bg-primary/5 p-5 transition-all animate-in fade-in zoom-in duration-300">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <p className="text-xs font-bold uppercase tracking-widest text-primary/70">Calculated Total</p>
+                        {rangeAmountLoading ? (
+                          <div className="mt-2 flex items-center gap-2">
+                            <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                            <span className="text-sm font-medium text-muted-foreground">Calculating smart total...</span>
+                          </div>
+                        ) : (
+                          <div className="mt-1 flex items-baseline gap-2">
+                            <span className="text-3xl font-black text-primary">{rangeAmount ? Number(rangeAmount).toLocaleString() : '0'}</span>
+                            <span className="text-sm font-bold text-primary/60">KES</span>
+                          </div>
+                        )}
+                      </div>
+                      {computedRange && !rangeAmountLoading && (
+                        <div className="text-right">
+                          <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60 text-right">Coverage Period</p>
+                          <div className="mt-1 rounded-lg bg-background/50 px-3 py-1 text-sm font-semibold shadow-sm">
+                            {MONTHS[computedRange.fromM - 1]} {computedRange.fromY} <span className="mx-1 text-muted-foreground">→</span> {MONTHS[computedRange.toM - 1]} {computedRange.toY}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    {/* Background decoration */}
+                    <div className="absolute -bottom-4 -right-4 h-16 w-16 opacity-10">
+                      <Banknote className="h-full w-full" />
+                    </div>
+                  </div>
                 )}
-              </div>
-              <div>
-                <label className="mb-1.5 block text-sm font-medium">Amount (KES)</label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={rangeAmountLoading ? '' : rangeAmount ? `${Number(rangeAmount).toLocaleString()} KES` : ''}
-                    readOnly
-                    className={`${inputCls} bg-muted cursor-not-allowed ${rangeAmountLoading ? 'text-muted-foreground' : ''}`}
-                    placeholder={rangeAmountLoading ? 'Calculating…' : 'Select student and enter months to calculate'}
-                  />
-                  {rangeAmountLoading && (
-                    <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
-                  )}
+
+                <div className="grid gap-6 sm:grid-cols-2">
+                  <div className="sm:col-span-1">
+                    <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-muted-foreground/80">
+                      Receipt No.
+                    </label>
+                    <div className="relative">
+                      <Receipt className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/60" />
+                      <input
+                        value={rangeReceiptNumber}
+                        onChange={(e) => setRangeReceiptNumber(e.target.value)}
+                        className={`${inputCls} pl-10 h-11 rounded-xl border-slate-200`}
+                        placeholder="Optional #"
+                      />
+                    </div>
+                  </div>
+                  <div className="sm:col-span-1">
+                    <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-muted-foreground/80">
+                      Payment Date
+                    </label>
+                    <input
+                      type="date"
+                      value={rangeReceiptDate}
+                      onChange={(e) => setRangeReceiptDate(e.target.value)}
+                      required
+                      className={`${inputCls} h-11 rounded-xl border-slate-200`}
+                    />
+                  </div>
                 </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
+
                 <div>
-                  <label className="mb-1.5 block text-sm font-medium">Receipt number</label>
-                  <input
-                    value={rangeReceiptNumber}
-                    onChange={(e) => setRangeReceiptNumber(e.target.value)}
-                    className={inputCls}
-                    placeholder="Optional"
+                  <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-muted-foreground/80">
+                    Additional Notes
+                  </label>
+                  <textarea
+                    value={rangeReceiptNotes}
+                    onChange={(e) => setRangeReceiptNotes(e.target.value)}
+                    rows={2}
+                    className="flex min-h-[80px] w-full rounded-2xl border border-slate-200 bg-background px-4 py-3 text-sm focus:border-primary focus:ring-primary/20 transition-all outline-none"
+                    placeholder="Enter any additional payment details..."
                   />
                 </div>
-                <div>
-                  <label className="mb-1.5 block text-sm font-medium">Date</label>
-                  <input
-                    type="date"
-                    value={rangeReceiptDate}
-                    onChange={(e) => setRangeReceiptDate(e.target.value)}
-                    required
-                    className={inputCls}
-                  />
+
+                <div className="flex items-center gap-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setRangeModalOpen(false)}
+                    className="flex-1 rounded-2xl border border-slate-200 py-3 text-sm font-bold text-slate-600 transition-all hover:bg-muted active:scale-95"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={rangeLoading || rangeAmountLoading || !rangeAmount || parseFloat(rangeAmount || '0') <= 0 || (rangeMode === 'single' ? !rangeStudentId : !rangeParentId) || !rangeMonthsCount || !computedRange}
+                    className="group relative flex-[2] overflow-hidden rounded-2xl bg-primary py-3 text-sm font-bold text-primary-foreground shadow-lg shadow-primary/20 transition-all hover:shadow-primary/30 active:scale-[0.98] disabled:opacity-50 disabled:active:scale-100"
+                  >
+                    <div className="relative z-10 flex items-center justify-center gap-2">
+                      {rangeLoading ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <span>Processing...</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>Record Payment</span>
+                          {rangeAmount && !rangeAmountLoading && (
+                            <span className="rounded-lg bg-white/20 px-2 py-0.5 text-[10px] uppercase tracking-tighter shadow-sm">
+                              {rangeMonthsCount} Mo.
+                            </span>
+                          )}
+                        </>
+                      )}
+                    </div>
+                    {/* Animated shine effect */}
+                    <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/10 to-transparent transition-transform group-hover:duration-1000 group-hover:translate-x-full" />
+                  </button>
                 </div>
-              </div>
-              <div>
-                <label className="mb-1.5 block text-sm font-medium">Notes</label>
-                <textarea
-                  value={rangeReceiptNotes}
-                  onChange={(e) => setRangeReceiptNotes(e.target.value)}
-                  rows={2}
-                  className="flex min-h-[60px] w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
-                  placeholder="Optional"
-                />
-              </div>
-              <div className="flex gap-2">
-                <button type="button" onClick={() => setRangeModalOpen(false)} className={btnSecondary}>
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={rangeLoading || rangeAmountLoading || !rangeAmount || parseFloat(rangeAmount || '0') <= 0 || !rangeStudentId || !rangeMonthsCount || !computedRange}
-                  className={btnPrimary}
-                >
-                  {rangeLoading ? 'Adding…' : 'Add receipt(s)'}
-                </button>
-              </div>
-            </form>
+              </form>
+            </div>
           </div>
         </>
       )}

@@ -60,21 +60,72 @@ export async function POST(req: NextRequest) {
     if (student.fee == null || student.fee === undefined) return NextResponse.json({ error: 'Student has no fee set' }, { status: 400 });
     if (filterByTeacher && student.teacherId !== session!.user!.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-    const months = [...monthRange(raw.fromMonth, raw.fromYear, raw.toMonth, raw.toYear)];
+    const monthsCount = (body as any).monthsCount;
+    let months: { month: number, year: number }[] = [];
+    
+    if (monthsCount) {
+        const count = parseInt(monthsCount, 10);
+        if (isNaN(count) || count < 1) return NextResponse.json({ error: 'Invalid monthsCount' }, { status: 400 });
+        
+        const now = new Date();
+        let testM = now.getMonth() + 1;
+        let testY = now.getFullYear();
+        
+        // Look back for any unpaid balance
+        for (let i = 0; i < 6; i++) {
+            const pm = testM === 1 ? 12 : testM - 1;
+            const py = testM === 1 ? testY - 1 : testY;
+            const prev = await prisma.payment.findUnique({
+                where: { studentId_month_year: { studentId: raw.studentId, month: pm, year: py } }
+            });
+            if (prev) {
+                const bal = toNum(prev.totalDue) - toNum((prev as any).discount) - toNum(prev.amountPaid);
+                if (bal > 1) { testM = pm; testY = py; } else { break; }
+            } else {
+                if (i > 3) break;
+                testM = pm; testY = py;
+            }
+        }
+
+        let foundCount = 0;
+        let m = testM, y = testY;
+        while (foundCount < count) {
+            const payment = await prisma.payment.findUnique({
+                where: { studentId_month_year: { studentId: raw.studentId, month: m, year: y } }
+            });
+            const balance = payment ? toNum(payment.totalDue) - toNum((payment as any).discount) - toNum(payment.amountPaid) : toNum(student.fee);
+            if (balance > 1) {
+                months.push({ month: m, year: y });
+                foundCount++;
+            }
+            m++; if (m > 12) { m = 1; y++; }
+            if (y > now.getFullYear() + 5) break;
+        }
+    } else {
+        months = [...monthRange(raw.fromMonth, raw.fromYear, raw.toMonth, raw.toYear)];
+    }
+
     if (months.length === 0) return NextResponse.json({ error: 'Invalid month range' }, { status: 400 });
 
     const feePerMonth = toNum(student.fee);
     const allPayments: { id: string; month: number; year: number; totalDue: number; discount: number; amountPaid: number; balanceDueDate: Date | null }[] = [];
     let carry = 0;
-    const firstMonth = months[0];
-    const prevOfFirstMonth = firstMonth.month === 1 ? 12 : firstMonth.month - 1;
-    const prevOfFirstYear = firstMonth.month === 1 ? firstMonth.year - 1 : firstMonth.year;
-    const prevPayment = await prisma.payment.findUnique({
-      where: { studentId_month_year: { studentId: raw.studentId, month: prevOfFirstMonth, year: prevOfFirstYear } },
-    });
-    if (prevPayment) {
-      const prevBalance = toNum(prevPayment.totalDue) - toNum((prevPayment as { discount?: unknown }).discount) - toNum(prevPayment.amountPaid);
-      if (prevBalance > 0) carry = prevBalance;
+    
+    // Only check carry-over if we are NOT using smart duration (compatibility)
+    // Actually, even in smart duration, the 'testM/testY' might start at a month that had a carry from its previous.
+    // However, the smart logic above already finds the month with balance.
+    
+    if (!monthsCount) {
+        const firstMonth = months[0];
+        const prevOfFirstMonth = firstMonth.month === 1 ? 12 : firstMonth.month - 1;
+        const prevOfFirstYear = firstMonth.month === 1 ? firstMonth.year - 1 : firstMonth.year;
+        const prevPayment = await prisma.payment.findUnique({
+          where: { studentId_month_year: { studentId: raw.studentId, month: prevOfFirstMonth, year: prevOfFirstYear } },
+        });
+        if (prevPayment) {
+          const prevBalance = toNum(prevPayment.totalDue) - toNum((prevPayment as { discount?: unknown }).discount) - toNum(prevPayment.amountPaid);
+          if (prevBalance > 0) carry = prevBalance;
+        }
     }
 
     for (const { month, year } of months) {
