@@ -70,7 +70,7 @@ export async function GET(req: NextRequest) {
   const bal = (p: { totalDue: unknown; amountPaid: unknown; discount?: unknown }) =>
     toNum(p.totalDue) - toNum(p.discount) - toNum(p.amountPaid);
   const nextMonthKeys = existingPayments
-    .filter((p) => bal(p) > 0)
+    .filter((p) => bal(p) > 1)
     .map((p) => {
       const nextM = p.month === 12 ? 1 : p.month + 1;
       const nextY = p.month === 12 ? p.year + 1 : p.year;
@@ -84,7 +84,7 @@ export async function GET(req: NextRequest) {
     : [];
   const carriedOverKeys = new Set(
     nextMonthPayments
-      .filter((np) => new Decimal(np.balanceCarriedOver).gt(0))
+      .filter((np) => new Decimal(np.balanceCarriedOver).gt(1))
       .map((np) => {
         const prevM = np.month === 1 ? 12 : np.month - 1;
         const prevY = np.month === 1 ? np.year - 1 : np.year;
@@ -96,7 +96,7 @@ export async function GET(req: NextRequest) {
     const balance = bal(p);
     const key = `${p.studentId}:${p.month}:${p.year}`;
     const balanceWasCarried = carriedOverKeys.has(key);
-    const canAddReceipt = balance > 0 && !balanceWasCarried;
+    const canAddReceipt = balance > 1 && !balanceWasCarried;
     payments.push({
       id: p.id,
       studentId: p.studentId,
@@ -120,7 +120,7 @@ export async function GET(req: NextRequest) {
     let balanceCarriedOver = 0;
     if (prevPayment) {
       const prevBalance = toNum(prevPayment.totalDue) - toNum((prevPayment as { discount?: unknown }).discount) - toNum(prevPayment.amountPaid);
-      if (prevBalance > 0) balanceCarriedOver = prevBalance;
+      if (prevBalance > 1) balanceCarriedOver = prevBalance;
     }
     const totalDue = fee + balanceCarriedOver;
     payments.push({
@@ -130,11 +130,11 @@ export async function GET(req: NextRequest) {
       totalDue,
       amountPaid: 0,
       balance: totalDue,
-      canAddReceipt: totalDue > 0,
+      canAddReceipt: totalDue > 1,
     });
   }
 
-  const payablePayments = payments.filter((p) => p.canAddReceipt && p.balance > 0);
+  const payablePayments = payments.filter((p) => p.canAddReceipt && p.balance > 1);
   const totalDue = payablePayments.reduce((sum, p) => sum + p.balance, 0);
 
   return NextResponse.json({

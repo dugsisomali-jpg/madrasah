@@ -171,7 +171,7 @@ export async function POST(req: NextRequest) {
             });
             if (prevPayment) {
               const prevBalance = toNum(prevPayment.totalDue) - toNum((prevPayment as any).discount) - toNum(prevPayment.amountPaid);
-              if (prevBalance > 0.01) carry = prevBalance;
+              if (prevBalance > 1) carry = prevBalance;
             }
         }
 
@@ -202,7 +202,7 @@ export async function POST(req: NextRequest) {
           }
           
           const balance = toNum(payment.totalDue) - toNum((payment as any).discount) - toNum(payment.amountPaid);
-          if (balance > 0.1) {
+          if (balance > 1) {
             studentPaymentsToPay.push({ ...payment, balance });
           }
         }

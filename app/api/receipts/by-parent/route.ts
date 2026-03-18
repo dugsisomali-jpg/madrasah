@@ -58,7 +58,7 @@ export async function POST(req: NextRequest) {
     const balanceWithDiscount = (p: { totalDue: unknown; discount?: unknown; amountPaid: unknown }) =>
       toNum(p.totalDue) - toNum((p as { discount?: unknown }).discount) - toNum(p.amountPaid);
     const nextMonthKeys = existingPayments
-      .filter((p) => balanceWithDiscount(p) > 0)
+      .filter((p) => balanceWithDiscount(p) > 1)
       .map((p) => {
         const nextM = p.month === 12 ? 1 : p.month + 1;
         const nextY = p.month === 12 ? p.year + 1 : p.year;
@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
       : [];
     const carriedOverKeys = new Set(
       nextMonthPayments
-        .filter((np) => new Decimal(np.balanceCarriedOver).gt(0))
+        .filter((np) => new Decimal(np.balanceCarriedOver).gt(1))
         .map((np) => {
           const prevM = np.month === 1 ? 12 : np.month - 1;
           const prevY = np.month === 1 ? np.year - 1 : np.year;
@@ -94,7 +94,7 @@ export async function POST(req: NextRequest) {
         });
         if (prevPayment) {
           const prevBalance = toNum(prevPayment.totalDue) - toNum((prevPayment as { discount?: unknown }).discount) - toNum(prevPayment.amountPaid);
-          if (prevBalance > 0) carry = prevBalance;
+          if (prevBalance > 1) carry = prevBalance;
         }
         const feeAmount = feeMap.get(s.id) ?? 0;
         const totalDue = feeAmount + carry;
@@ -124,7 +124,7 @@ export async function POST(req: NextRequest) {
 
     const payments = allPayments.filter((p) => {
       const balance = p.totalDue - p.discount - p.amountPaid;
-      if (balance <= 0) return false;
+      if (balance <= 1) return false;
       const key = `${p.studentId}:${raw.month}:${raw.year}`;
       return !carriedOverKeys.has(key);
     });

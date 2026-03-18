@@ -147,7 +147,7 @@ export async function POST(req: NextRequest) {
         });
         if (prevPayment) {
           const prevBalance = toNum(prevPayment.totalDue) - toNum((prevPayment as any).discount) - toNum(prevPayment.amountPaid);
-          if (prevBalance > 0) carry = prevBalance;
+          if (prevBalance > 1) carry = prevBalance;
         }
     }
 
@@ -187,7 +187,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const payments = allPayments.filter((p) => p.totalDue - p.discount - p.amountPaid > 0);
+    const payments = allPayments.filter((p) => p.totalDue - p.discount - p.amountPaid > 1);
     if (payments.length === 0) {
       return NextResponse.json({ error: 'All months in range are already fully paid' }, { status: 400 });
     }
@@ -226,7 +226,7 @@ export async function POST(req: NextRequest) {
       for (const p of payments) {
         const balance = p.totalDue - p.discount - p.amountPaid;
         const alloc = balance;
-        if (alloc <= 0) continue;
+        if (alloc <= 1) continue;
         const newAmountPaid = p.amountPaid + alloc;
         await tx.receipt.create({
           data: {

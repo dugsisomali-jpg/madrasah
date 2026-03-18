@@ -63,7 +63,7 @@ export async function GET(req: NextRequest) {
   const bal = (p: { totalDue: unknown; amountPaid: unknown; discount?: unknown }) =>
     toNum(p.totalDue) - toNum(p.discount) - toNum(p.amountPaid);
   const nextMonthKeys = payments
-    .filter((p) => bal(p) > 0)
+    .filter((p) => bal(p) > 1)
     .map((p) => {
       const nextM = p.month === 12 ? 1 : p.month + 1;
       const nextY = p.month === 12 ? p.year + 1 : p.year;
@@ -77,7 +77,7 @@ export async function GET(req: NextRequest) {
     : [];
   const carriedOverKeys = new Set(
     nextMonthPayments
-      .filter((np) => new Decimal(np.balanceCarriedOver).gt(0))
+      .filter((np) => new Decimal(np.balanceCarriedOver).gt(1))
       .map((np) => {
         const prevM = np.month === 1 ? 12 : np.month - 1;
         const prevY = np.month === 1 ? np.year - 1 : np.year;
@@ -89,7 +89,7 @@ export async function GET(req: NextRequest) {
     const balance = bal(p);
     const key = `${p.studentId}:${p.month}:${p.year}`;
     const balanceWasCarried = carriedOverKeys.has(key);
-    const canAddReceipt = balance > 0 && !balanceWasCarried;
+    const canAddReceipt = balance > 1 && !balanceWasCarried;
     return { ...p, canAddReceipt };
   });
 
@@ -131,7 +131,7 @@ async function createPaymentForStudent(
   if (prevPayment) {
     const prevDiscount = new Decimal(toNum((prevPayment as { discount?: unknown }).discount));
     const prevBalance = new Decimal(prevPayment.totalDue).minus(prevDiscount).minus(new Decimal(prevPayment.amountPaid));
-    if (prevBalance.gt(0)) balanceCarriedOver = prevBalance;
+    if (prevBalance.gt(1)) balanceCarriedOver = prevBalance;
   }
   const totalDue = feeAmount.plus(balanceCarriedOver);
 
@@ -220,7 +220,7 @@ export async function POST(req: NextRequest) {
       if (prev) {
         const prevDiscount = new Decimal(toNum((prev as { discount?: unknown }).discount));
         const prevBalance = new Decimal(prev.totalDue).minus(prevDiscount).minus(new Decimal(prev.amountPaid));
-        if (prevBalance.gt(0)) balanceCarriedOver = prevBalance;
+        if (prevBalance.gt(1)) balanceCarriedOver = prevBalance;
       }
       const totalDue = feeAmount.plus(balanceCarriedOver);
       toCreate.push({ studentId: s.id, feeAmount, balanceCarriedOver, totalDue });
