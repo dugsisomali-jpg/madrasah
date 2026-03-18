@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const batch = await prisma.receiptBatch.findUnique({
+    const batch = (await prisma.receiptBatch.findUnique({
       where: { id: batchId },
       include: {
         Parent: { select: { name: true, username: true } },
@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
           }
         }
       }
-    });
+    })) as any;
 
     if (!batch) {
       return NextResponse.json({ error: 'Receipt batch not found' }, { status: 404 });
@@ -41,7 +41,7 @@ export async function GET(req: NextRequest) {
     // We group receipts by student for a cleaner summary
     const studentsMap = new Map();
 
-    batch.receipts.forEach(r => {
+    batch.receipts.forEach((r: any) => {
       const sId = r.Payment.studentId;
       if (!studentsMap.has(sId)) {
         studentsMap.set(sId, {
@@ -69,7 +69,13 @@ export async function GET(req: NextRequest) {
       totalAmount: Number(batch.totalAmount),
       parentName: batch.Parent?.name || batch.Parent?.username || batch.Student?.name || 'Valued Parent',
       notes: batch.notes,
-      students: Array.from(studentsMap.values())
+      students: Array.from(studentsMap.values()),
+      allMonths: Array.from(new Set(batch.receipts.map((r: any) => `${r.Payment.year}-${r.Payment.month}`)))
+        .map((s: any) => {
+          const [y, m] = s.split('-').map(Number);
+          return { month: m, year: y };
+        })
+        .sort((a: any, b: any) => (a.year * 12 + a.month) - (b.year * 12 + b.month))
     };
 
     return NextResponse.json(summary);

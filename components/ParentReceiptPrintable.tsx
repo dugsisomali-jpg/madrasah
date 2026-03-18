@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState, useEffect } from 'react';
-import { Printer, FileDown, Loader2, CheckCircle2, Receipt } from 'lucide-react';
+import { Printer, FileDown, Loader2, CheckCircle2, Receipt, Table as TableIcon } from 'lucide-react';
 import Swal from 'sweetalert2';
 
 type StudentSummary = {
@@ -21,6 +21,7 @@ type ParentSummary = {
   parentName: string;
   notes?: string;
   students: StudentSummary[];
+  allMonths: { month: number; year: number }[];
 };
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -47,21 +48,33 @@ export function ParentReceiptPrintable({ batchId, onClose }: { batchId: string; 
     if (!printWindow) return;
 
     const styles = `
-      body { font-family: 'Georgia', serif; padding: 40px; color: #0f172a; line-height: 1.5; }
-      .header { border-bottom: 2px solid #e2e8f0; margin-bottom: 30px; padding-bottom: 20px; }
-      .header h1 { margin: 0; font-size: 28px; color: #1e293b; }
-      .header p { margin: 5px 0 0; color: #64748b; font-size: 14px; }
-      .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 40px; }
-      .info-box h3 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin-bottom: 8px; }
-      .info-box p { font-size: 16px; font-weight: 600; margin: 0; }
-      table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
-      th { text-align: left; padding: 12px; border-bottom: 2px solid #f1f5f9; color: #64748b; font-size: 12px; text-transform: uppercase; }
-      td { padding: 12px; border-bottom: 1px solid #f1f5f9; font-size: 14px; }
-      .amount { text-align: right; }
-      .total-row { background: #f8fafc; font-weight: 700; font-size: 16px; }
-      .footer { margin-top: 50px; text-align: center; font-size: 12px; color: #94a3b8; border-top: 1px solid #f1f5f9; pt-20px; }
-      .student-section { margin-top: 20px; }
-      .student-header { background: #f1f5f9; padding: 8px 12px; font-weight: 700; font-size: 14px; margin-bottom: 10px; }
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
+      body { font-family: 'Inter', sans-serif; padding: 40px; color: #0f172a; line-height: 1.5; background: white; }
+      .header { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 2px solid #f1f5f9; padding-bottom: 30px; margin-bottom: 40px; }
+      .branding h1 { margin: 0; font-size: 24px; font-weight: 800; color: #0f172a; }
+      .branding p { margin: 4px 0 0; color: #64748b; font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; }
+      .receipt-meta { text-align: right; }
+      .receipt-meta p { margin: 0; font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; }
+      .receipt-meta .value { font-size: 16px; color: #0f172a; margin-bottom: 8px; }
+      .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 40px; }
+      .info-card { background: #f8fafc; border: 1px solid #f1f5f9; padding: 20px; border-radius: 16px; }
+      .info-card h3 { font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase; margin: 0 0 8px; }
+      .info-card p { font-size: 16px; font-weight: 600; margin: 0; color: #1e293b; }
+      .notes { border-top: 1px solid #e2e8f0; margin-top: 12px; pt-12px; font-size: 12px; color: #64748b; font-style: italic; }
+      
+      table { width: 100%; border-collapse: separate; border-spacing: 0; margin-bottom: 40px; }
+      th { background: #f1f5f9; padding: 12px 16px; font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase; text-align: left; border-bottom: 2px solid #e2e8f0; }
+      td { padding: 16px; font-size: 13px; border-bottom: 1px solid #f1f5f9; color: #334155; }
+      .col-student { font-weight: 600; color: #0f172a; width: 200px; }
+      .amount-cell { text-align: right; font-family: monospace; font-weight: 600; }
+      .total-cell { font-weight: 800; color: #0f172a; background: #f8fafc; }
+      .footer { margin-top: 60px; text-align: center; }
+      .footer p { font-size: 12px; color: #94a3b8; font-weight: 600; }
+      
+      @media print {
+        body { padding: 0; }
+        .no-print { display: none; }
+      }
     `;
 
     printWindow.document.write(`
@@ -109,7 +122,7 @@ export function ParentReceiptPrintable({ batchId, onClose }: { batchId: string; 
     return (
       <div className="flex h-64 flex-col items-center justify-center gap-4">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="text-sm font-medium text-muted-foreground">Preparing your premium receipt...</p>
+        <p className="text-sm font-medium text-muted-foreground">Generating Pivot Summary...</p>
       </div>
     );
   }
@@ -117,121 +130,153 @@ export function ParentReceiptPrintable({ batchId, onClose }: { batchId: string; 
   if (!summary) return <div>Failed to load receipt details.</div>;
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 max-h-[90vh] overflow-y-auto custom-scrollbar p-2">
       <div className="relative overflow-hidden rounded-3xl border border-white/20 bg-white/10 p-1 shadow-2xl backdrop-blur-xl dark:bg-slate-900/50">
         <div 
           ref={printRef}
-          className="bg-white p-8 text-slate-900 rounded-2xl md:p-12"
+          className="bg-white p-10 text-slate-900 rounded-2xl"
           style={{ fontFamily: "'Inter', sans-serif" }}
         >
-          <div className="mb-10 flex flex-col justify-between gap-6 border-b border-slate-100 pb-10 sm:flex-row sm:items-end">
-            <div>
-              <div className="flex items-center gap-2 mb-4">
-                <div className="h-10 w-10 flex items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/20">
+          {/* Header */}
+          <div className="header flex justify-between items-end border-b-2 border-slate-100 pb-8 mb-10">
+            <div className="branding">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="h-10 w-10 flex items-center justify-center rounded-xl bg-slate-900 text-white">
                   <Receipt className="h-6 w-6" />
                 </div>
-                <h1 className="text-2xl font-black tracking-tight text-slate-900">Official Receipt</h1>
+                <h1 className="text-2xl font-black tracking-tight">Official Receipt</h1>
               </div>
-              <p className="text-sm font-medium text-slate-500 uppercase tracking-widest">Madrasah Academic System</p>
+              <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Madrasah Academic Intelligence</p>
             </div>
-            <div className="text-left sm:text-right">
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-tighter">Receipt Number</p>
-              <p className="text-lg font-mono font-bold text-primary">#{summary.receiptNumber || summary.batchId.slice(-6).toUpperCase()}</p>
-              <p className="mt-2 text-xs font-bold text-slate-400 uppercase tracking-tighter">Issue Date</p>
-              <p className="text-sm font-bold">{new Date(summary.date).toLocaleDateString()}</p>
+            <div className="receipt-meta text-right">
+              <div>
+                <p className="text-[9px] font-black text-slate-300 uppercase mb-1">Receipt ID</p>
+                <p className="text-sm font-mono font-bold text-slate-900 mb-4">#{summary.receiptNumber || summary.batchId.slice(-6).toUpperCase()}</p>
+              </div>
+              <div>
+                <p className="text-[9px] font-black text-slate-300 uppercase mb-1">Issue Date</p>
+                <p className="text-sm font-bold text-slate-900">{new Date(summary.date).toLocaleDateString(undefined, { dateStyle: 'long' })}</p>
+              </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-8 mb-12 sm:grid-cols-2">
-            <div className="rounded-2xl bg-slate-50 p-6 border border-slate-100/50">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Paid By (Parent)</p>
-              <p className="text-lg font-bold text-slate-900">{summary.parentName}</p>
+          {/* Info Section */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
+            <div className="info-card bg-slate-50 border border-slate-100 p-6 rounded-2xl">
+              <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Billing To</h3>
+              <p className="text-lg font-bold text-slate-900 mb-3">{summary.parentName}</p>
               {summary.notes && (
-                <div className="mt-4 pt-4 border-t border-slate-200">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Notes</p>
-                  <p className="text-xs text-slate-600 italic">"{summary.notes}"</p>
+                <div className="border-t border-slate-200 mt-4 pt-4">
+                  <h4 className="text-[9px] font-black text-slate-400 uppercase mb-1">Narration</h4>
+                  <p className="text-xs text-slate-500 italic leading-relaxed">"{summary.notes}"</p>
                 </div>
               )}
             </div>
-            <div className="rounded-2xl bg-primary/5 p-6 border border-primary/10 flex flex-col justify-center">
-              <p className="text-[10px] font-black text-primary/60 uppercase tracking-widest mb-1">Total Amount Paid</p>
-              <p className="text-3xl font-black text-primary tracking-tighter">
-                {summary.totalAmount.toLocaleString()} <span className="text-sm font-bold text-primary/60">KES</span>
-              </p>
-              <div className="mt-2 inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full w-fit">
-                <CheckCircle2 className="h-3 w-3" /> Fully Credited
+            <div className="info-card bg-primary/5 border border-primary/10 p-6 rounded-2xl flex flex-col justify-center">
+              <h3 className="text-[10px] font-black text-primary/60 uppercase tracking-widest mb-1 text-center sm:text-left">Settlement Amount</h3>
+              <div className="flex items-baseline gap-2 justify-center sm:justify-start">
+                <span className="text-4xl font-black text-primary tracking-tighter">{summary.totalAmount.toLocaleString()}</span>
+                <span className="text-sm font-bold text-primary/60 uppercase">KES</span>
+              </div>
+              <div className="mt-4 flex items-center gap-2 text-[10px] font-bold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full w-fit">
+                <CheckCircle2 className="h-3 w-3" /> Fully Credited & Synced
               </div>
             </div>
           </div>
 
-          <div className="space-y-8">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Payment Breakdown</p>
-            {summary.students.map((student, idx) => (
-              <div key={idx} className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm">
-                <div className="bg-slate-50 px-5 py-3 border-b border-slate-100 flex justify-between items-center">
-                  <span className="text-sm font-bold text-slate-700">{student.studentName}</span>
-                  <span className="text-xs font-bold text-primary bg-white px-3 py-1 rounded-lg border border-slate-200 shadow-sm">
-                    {student.amountPaid.toLocaleString()} KES
-                  </span>
-                </div>
-                <div className="p-5">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="text-left text-slate-400">
-                        <th className="pb-3 pt-0 font-black text-[10px] uppercase tracking-wider">Paid Period</th>
-                        <th className="pb-3 pt-0 text-right font-black text-[10px] uppercase tracking-wider">Amount</th>
-                      </tr>
-                    </thead>
-                    <tbody className="text-slate-600">
-                      {student.periods.map((p, pIdx) => (
-                        <tr key={pIdx}>
-                          <td className="py-2 font-medium">{MONTHS[p.month - 1]} {p.year}</td>
-                          <td className="py-2 text-right font-mono font-semibold">{p.amount.toLocaleString()}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                    <tfoot>
-                      <tr className="border-t border-slate-100">
-                        <td className="pt-3 font-bold text-slate-900">Student Total</td>
-                        <td className="pt-3 text-right font-black text-slate-900 font-mono italic">{student.amountPaid.toLocaleString()} KES</td>
-                      </tr>
-                    </tfoot>
-                  </table>
-                </div>
+          {/* Pivot Table */}
+          <div className="mb-12">
+            <div className="flex items-center gap-2 mb-6 px-1">
+              <div className="h-5 w-5 rounded bg-slate-100 flex items-center justify-center">
+                <TableIcon className="h-3 w-3 text-slate-500" />
               </div>
-            ))}
+              <span className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Cross-Tabulation Summary</span>
+            </div>
+            <div className="overflow-x-auto rounded-2xl border border-slate-100 shadow-sm bg-white">
+              <table className="w-full text-left border-collapse min-w-[600px]">
+                <thead>
+                  <tr className="bg-slate-50/50">
+                    <th className="py-4 px-6 text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-100">Student Name</th>
+                    {summary.allMonths.map((m, i) => (
+                      <th key={i} className="py-4 px-4 text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-100 text-right">
+                        {MONTHS[m.month - 1]} {m.year % 100}
+                      </th>
+                    ))}
+                    <th className="py-4 px-6 text-[10px] font-black text-primary uppercase tracking-widest border-b border-slate-100 text-right bg-primary/5">Student Total</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {summary.students.map((student, sIdx) => (
+                    <tr key={sIdx} className="hover:bg-slate-50/30 transition-colors">
+                      <td className="py-5 px-6 font-bold text-slate-900 border-r border-slate-50">{student.studentName}</td>
+                      {summary.allMonths.map((m, mIdx) => {
+                        const paid = student.periods.find(p => p.month === m.month && p.year === m.year);
+                        return (
+                          <td key={mIdx} className="py-5 px-4 text-right font-mono text-sm text-slate-500">
+                            {paid ? paid.amount.toLocaleString() : '—'}
+                          </td>
+                        );
+                      })}
+                      <td className="py-5 px-6 text-right font-black text-primary bg-primary/5 italic">
+                        {student.amountPaid.toLocaleString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr className="bg-slate-900 text-white">
+                    <td className="py-4 px-6 text-xs font-black uppercase tracking-widest">Grand Settlement</td>
+                    {summary.allMonths.map((m, mIdx) => {
+                      const monthTotal = summary.students.reduce((sum, s) => {
+                        const p = s.periods.find(px => px.month === m.month && px.year === m.year);
+                        return sum + (p ? p.amount : 0);
+                      }, 0);
+                      return (
+                        <td key={mIdx} className="py-4 px-4 text-right font-mono text-xs font-bold text-white/70">
+                          {monthTotal > 0 ? monthTotal.toLocaleString() : '—'}
+                        </td>
+                      );
+                    })}
+                    <td className="py-4 px-6 text-right font-black text-white text-lg tracking-tighter">
+                      {summary.totalAmount.toLocaleString()}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
           </div>
 
-          <div className="mt-16 text-center">
-            <div className="inline-block p-4 rounded-full bg-slate-50 border border-slate-100 mb-6 group transition-all hover:bg-primary/5 hover:border-primary/20">
-              <p className="text-sm font-bold text-slate-500 group-hover:text-primary">Thank you for your timely contribution</p>
+          <div className="footer mt-12 pb-4 text-center">
+            <div className="inline-block py-2 px-6 rounded-full border border-slate-100 bg-slate-50/50 mb-4">
+              <p className="text-[11px] font-bold text-slate-400">Total Contribution: {summary.totalAmount.toLocaleString()} KES. Thank you!</p>
             </div>
-            <p className="text-[10px] font-bold text-slate-300 uppercase tracking-[0.3em]">Generated by Madrasah Academic Intelligence</p>
+            <div className="text-[8px] font-black text-slate-300 uppercase tracking-[0.4em]">Integrated Academic Management Certificate</div>
           </div>
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-3">
+      {/* Actions */}
+      <div className="flex flex-wrap gap-4 mt-2">
         <button
           onClick={handlePrint}
-          className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-slate-900 px-6 py-4 text-sm font-black text-white shadow-xl shadow-slate-200 transition-all hover:bg-slate-800 active:scale-95 dark:shadow-none"
+          className="flex-1 flex items-center justify-center gap-3 bg-slate-900 text-white px-8 py-4 rounded-2xl font-black text-sm shadow-xl hover:bg-slate-800 transition-all active:scale-95"
         >
           <Printer className="h-5 w-5" />
-          Print Receipt
+          Full Print
         </button>
         <button
           onClick={handleExportPdf}
           disabled={exporting}
-          className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-white border-2 border-slate-200 px-6 py-4 text-sm font-black text-slate-900 transition-all hover:bg-slate-50 active:scale-95 disabled:opacity-50"
+          className="flex-1 flex items-center justify-center gap-3 bg-white border-2 border-slate-200 text-slate-900 px-8 py-4 rounded-2xl font-black text-sm hover:bg-slate-50 transition-all disabled:opacity-50"
         >
           {exporting ? <Loader2 className="h-5 w-5 animate-spin" /> : <FileDown className="h-5 w-5" />}
           Export PDF
         </button>
         <button
           onClick={onClose}
-          className="flex-none rounded-2xl bg-slate-100 px-6 py-4 text-sm font-black text-slate-600 transition-all hover:bg-slate-200 active:scale-95"
+          className="px-8 py-4 bg-slate-100 text-slate-500 rounded-2xl font-black text-sm hover:bg-slate-200 transition-all"
         >
-          Close
+          Dismiss
         </button>
       </div>
     </div>
