@@ -138,6 +138,8 @@ export async function GET(req: NextRequest) {
             foundCount++;
             finalRange.toM = m;
             finalRange.toY = y;
+        } else if (payment) {
+            console.log(`[GET expected] Skipping fully paid month ${m}/${y} for student ${studentId} (balance: ${balance})`);
         }
         
         m++;

@@ -125,12 +125,16 @@ export async function GET(req: NextRequest) {
             where: { studentId_month_year: { studentId, month: m, year: y } }
           });
           const balance = payment ? toNum(payment.totalDue) - toNum((payment as any).discount) - toNum(payment.amountPaid) : feePerMonth;
+          
           if (balance > 1) {
             if (foundCount === 0) { studentRange.fromM = m; studentRange.fromY = y; }
             studentRequiredAmount += balance;
             foundCount++;
             studentRange.toM = m; studentRange.toY = y;
+          } else if (payment) {
+            console.log(`[GET expected/by-parent] Skipping fully paid month ${m}/${y} for student ${studentId} (balance: ${balance})`);
           }
+
           m++; if (m > 12) { m = 1; y++; }
           if (y > currentY + 5) break;
         }
