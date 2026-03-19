@@ -3,16 +3,37 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
+// Helper to map legacy keys to standardized ones
+const LEGACY_MAP: Record<string, string> = {
+  'madrasah_name': 'name',
+  'madrasah_logo': 'logo',
+  'madrasah_favicon': 'favicon',
+  'madrasah_address': 'address',
+  'madrasah_phone': 'phone',
+  'madrasah_email': 'email',
+};
+
 export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   try {
     const settings = await prisma.systemSetting.findMany();
-    return NextResponse.json(settings);
+    
+    // Virtual migration: if legacy key exists but standard doesn't, alias it
+    const map: Record<string, any> = {};
+    settings.forEach(s => {
+      map[s.key] = s;
+      const standardized = LEGACY_MAP[s.key];
+      if (standardized && !settings.some(x => x.key === standardized)) {
+        map[standardized] = { ...s, key: standardized };
+      }
+    });
+
+    return NextResponse.json(Object.values(map));
   } catch (error) {
     console.error('[SETTINGS_GET]', error);
-    return NextResponse.json([], { status: 200 }); // Return empty array instead of 500 to keep UI stable
+    return NextResponse.json([], { status: 200 });
   }
 }
 
@@ -20,9 +41,6 @@ export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  // Only admins or system managers can update settings
-  // Assuming 'manage.system' or 'system.manage' permission
-  // For now, checking if user has ANY system-level permission or is Admin
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
     include: { roles: { include: { permissions: true } }, directPermissions: true },
@@ -33,7 +51,10 @@ export async function POST(req: NextRequest) {
     ...(user?.directPermissions.map(p => p.name) || [])
   ];
 
-  if (!allPermissions.includes('manage.system') && !allPermissions.includes('system.manage')) {
+  const isAdmin = user?.roles.some(r => r.name.toLowerCase() === 'admin' || r.name.toLowerCase() === 'superadmin');
+  const hasSystemPerm = allPermissions.includes('manage.system') || allPermissions.includes('system.manage') || allPermissions.includes('manage.all');
+
+  if (!isAdmin && !hasSystemPerm) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
@@ -43,13 +64,24 @@ export async function POST(req: NextRequest) {
 
     if (!key) return NextResponse.json({ error: 'Key is required' }, { status: 400 });
 
-    const setting = await prisma.systemSetting.upsert({
-      where: { key },
-      update: { value, description },
-      create: { key, value, description },
+    // Transaction to upsert new key and CLEAN UP legacy key if it exists
+    const result = await prisma.$transaction(async (tx) => {
+      const setting = await tx.systemSetting.upsert({
+        where: { key },
+        update: { value, description: description || null },
+        create: { key, value, description: description || null },
+      });
+
+      // If we are saving a standard key, delete the legacy one to avoid "Double state"
+      const legacyKey = Object.keys(LEGACY_MAP).find(k => LEGACY_MAP[k] === key);
+      if (legacyKey) {
+        await tx.systemSetting.deleteMany({ where: { key: legacyKey } });
+      }
+
+      return setting;
     });
 
-    return NextResponse.json(setting);
+    return NextResponse.json(result);
   } catch (error) {
     console.error('[SETTINGS_POST]', error);
     return NextResponse.json({ error: 'Internal Error' }, { status: 500 });

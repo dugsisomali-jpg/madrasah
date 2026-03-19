@@ -10,9 +10,13 @@ import {
   ChevronLeft, 
   FileText,
   Calendar,
-  ArrowRight
+  ArrowRight,
+  MapPin,
+  Phone,
+  Mail
 } from 'lucide-react';
 import Swal from 'sweetalert2';
+import { cn } from '@/lib/utils';
 
 type PaymentInfo = {
   id: string;
@@ -57,6 +61,7 @@ export default function StatementPage({ params }: { params: Promise<{ id: string
   const [statement, setStatement] = useState<ParentStatement | null>(null);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
+  const [settings, setSettings] = useState<Record<string, string>>({});
   const printRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -73,7 +78,6 @@ export default function StatementPage({ params }: { params: Promise<{ id: string
       .finally(() => setLoading(false));
   }, [id, from, to]);
 
-  const [settings, setSettings] = useState<Record<string, string>>({});
   useEffect(() => {
     fetch('/api/settings')
       .then(r => r.json())
@@ -116,19 +120,19 @@ export default function StatementPage({ params }: { params: Promise<{ id: string
     return (
       <div className="flex h-screen flex-col items-center justify-center gap-4 bg-slate-50">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
-        <p className="font-semibold text-slate-500 animate-pulse uppercase tracking-[0.2em] text-xs font-mono">Generating Statement...</p>
+        <p className="font-semibold text-slate-500 animate-pulse uppercase tracking-[0.2em] text-xs">Generating Statement...</p>
       </div>
     );
   }
 
-  if (!statement) return <div className="p-10 text-center font-bold text-destructive">Failed to load statement details.</div>;
+  if (!statement) return <div className="p-10 text-center font-bold text-destructive">Failed to load statement.</div>;
 
   const firstStudent = statement.students[0];
   const monthKeys = firstStudent?.payments.map(p => `${p.year}-${String(p.month).padStart(2, '0')}`) || [];
   const monthLabels = firstStudent?.payments.map(p => `${MONTHS[p.month - 1]} ${String(p.year).slice(-2)}`) || [];
 
   return (
-    <div className="min-h-screen bg-slate-100/30 p-4 md:p-8 print:p-0 print:bg-white overflow-y-auto custom-scrollbar">
+    <div className="min-h-screen bg-slate-100/30 p-4 md:p-8 print:p-0 print:bg-white overflow-y-auto custom-scrollbar italic-none">
       {/* Action Bar */}
       <div className="mx-auto max-w-7xl mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 print:hidden">
         <button
@@ -142,7 +146,7 @@ export default function StatementPage({ params }: { params: Promise<{ id: string
           <button
             onClick={handleExportPdf}
             disabled={exporting}
-            className="flex items-center gap-2 rounded-2xl border-2 border-slate-200 bg-white px-6 py-3 text-xs font-black text-slate-900 shadow-sm hover:bg-slate-50 hover:border-slate-300 transition-all disabled:opacity-50 uppercase tracking-widest"
+            className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-6 py-3 text-xs font-black text-slate-600 shadow-sm hover:bg-slate-50 transition-all disabled:opacity-50 uppercase tracking-widest"
           >
             {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileDown className="h-4 w-4" />}
             Export PDF
@@ -162,100 +166,124 @@ export default function StatementPage({ params }: { params: Promise<{ id: string
         <div 
           ref={printRef}
           id="printable-statement"
-          className="bg-white p-10 md:p-14 print:p-8 text-slate-900"
-          style={{ fontFamily: "'Inter', sans-serif" }}
+          className="bg-white p-12 md:p-20 print:p-10 text-slate-900"
         >
-          {/* Header */}
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end border-b-4 border-slate-900 pb-10 mb-12 gap-8">
-            <div className="branding">
-              <div className="flex items-center gap-5 mb-4">
-                {settings.logo ? (
-                  <img src={settings.logo} alt="Logo" className="h-16 w-auto object-contain" />
-                ) : (
-                  <div className="h-12 w-12 flex items-center justify-center rounded-2xl bg-slate-900 text-white shadow-xl shadow-slate-900/10">
-                    <FileText className="h-6 w-6" />
+          {/* Header Section */}
+          <div className="flex flex-col md:flex-row justify-between items-start border-b-2 border-slate-900 pb-12 mb-12 gap-10">
+            <div className="flex flex-col gap-8">
+               <div className="flex items-center gap-6">
+                  <div className="h-20 w-20 flex items-center justify-center rounded-2xl bg-slate-900 text-white shadow-2xl p-2 overflow-hidden">
+                     {settings.logo ? (
+                        <img src={settings.logo} alt="Logo" className="w-full h-full object-contain" />
+                     ) : (
+                        <FileText className="h-10 w-10 opacity-40" />
+                     )}
                   </div>
-                )}
-                <div>
-                  <h1 className="text-2xl font-black tracking-tighter text-slate-900 leading-none uppercase italic">{settings.name || 'Madrasah'}</h1>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mt-1.5">{settings.address || 'Account Statement'}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 sm:ml-16">
-                 <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Period:</span>
-                 <div className="flex items-center gap-2 text-sm font-black text-slate-600 uppercase tracking-tighter">
-                    {from ? from : 'All Time'}
-                    <ArrowRight className="h-3 w-3 text-slate-300" />
-                    {to ? to : 'Present'}
-                 </div>
-              </div>
+                  <div>
+                     <h1 className="text-4xl font-black tracking-tighter text-slate-900 leading-none uppercase mb-2">{settings.name || 'Madrasah'}</h1>
+                     <p className="text-sm font-bold text-slate-400 uppercase tracking-[0.3em]">Account Statement</p>
+                  </div>
+               </div>
+
+               <div className="flex flex-col gap-2">
+                  <div className="flex items-center gap-3">
+                     <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Period:</span>
+                     <div className="flex items-center gap-2 text-sm font-black text-slate-700 uppercase">
+                        {from || 'All Time'}
+                        <ArrowRight className="h-3 w-3 text-slate-300" />
+                        {to || 'Present'}
+                     </div>
+                  </div>
+                  {settings.address && (
+                    <div className="flex items-start gap-2 mt-2">
+                       <MapPin className="h-3.5 w-3.5 text-slate-300 mt-0.5" />
+                       <p className="text-[11px] font-bold text-slate-500 uppercase leading-relaxed max-w-xs">{settings.address}</p>
+                    </div>
+                  )}
+               </div>
             </div>
-            <div className="receipt-meta text-left sm:text-right">
-              <div className="mb-4">
-                <p className="text-[9px] font-black text-slate-300 uppercase mb-1 tracking-[0.2em]">Parent Name</p>
-                <div className="flex items-center gap-2 sm:justify-end">
-                   <User className="h-3.5 w-3.5 text-slate-400" />
-                   <p className="text-xl font-black text-slate-900 uppercase tracking-tight">{statement.parentName}</p>
-                </div>
-              </div>
-              <div>
-                <p className="text-[9px] font-black text-slate-300 uppercase mb-1 tracking-[0.2em]">Generated On</p>
-                <div className="flex items-center gap-2 sm:justify-end">
-                  <Calendar className="h-3.5 w-3.5 text-slate-400" />
-                  <p className="text-xs font-bold text-slate-500">{new Date(statement.generatedAt).toLocaleDateString(undefined, { dateStyle: 'medium' })}</p>
-                </div>
-              </div>
+
+            <div className="flex flex-col items-start md:items-end gap-10 min-w-[250px]">
+               <div className="text-left md:text-right">
+                  <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-2">Parent Name</p>
+                  <div className="flex items-center gap-3 md:justify-end">
+                     <User className="h-4 w-4 text-slate-400" />
+                     <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight">{statement.parentName}</h2>
+                  </div>
+               </div>
+
+               <div className="text-left md:text-right">
+                  <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-2">Generated On</p>
+                  <div className="flex items-center gap-3 md:justify-end">
+                     <Calendar className="h-4 w-4 text-slate-400" />
+                     <p className="text-sm font-black text-slate-600 uppercase">{new Date(statement.generatedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
+                  </div>
+               </div>
+
+               <div className="flex flex-col gap-2 text-left md:text-right">
+                  {settings.phone && (
+                    <div className="flex items-center gap-2 md:justify-end">
+                       <Phone className="h-3 w-3 text-slate-300" />
+                       <p className="text-[11px] font-bold text-slate-500 uppercase">{settings.phone}</p>
+                    </div>
+                  )}
+                  {settings.email && (
+                    <div className="flex items-center gap-2 md:justify-end">
+                       <Mail className="h-3 w-3 text-slate-300" />
+                       <p className="text-[11px] font-bold text-slate-500 uppercase">{settings.email}</p>
+                    </div>
+                  )}
+               </div>
             </div>
           </div>
 
-          {/* Regular Full-Bordered Table */}
-          <div className="overflow-x-auto mb-12 border border-slate-900">
+          {/* Statement Matrix */}
+          <div className="overflow-x-auto mb-16 rounded-xl border border-slate-900/10">
             <table className="w-full text-left border-collapse min-w-[1000px]">
               <thead>
-                <tr className="bg-slate-100">
-                  <th className="py-4 px-4 text-[11px] font-black text-slate-900 uppercase tracking-widest border border-slate-900 sticky left-0 bg-slate-100 z-10 w-[200px]">Student Name</th>
+                <tr className="bg-slate-900 text-white">
+                  <th className="py-6 px-6 text-[11px] font-black uppercase tracking-widest border-r border-slate-800 sticky left-0 bg-slate-900 z-10 w-[240px]">Student Registry</th>
                   {monthLabels.map((month, mIdx) => (
-                    <th key={mIdx} className="py-4 px-3 text-[10px] font-black text-slate-900 uppercase tracking-widest text-right border border-slate-900 whitespace-nowrap min-w-[80px]">
+                    <th key={mIdx} className="py-6 px-4 text-[10px] font-black uppercase tracking-widest text-right border-r border-slate-800 whitespace-nowrap min-w-[90px]">
                       {month}
                     </th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="font-mono text-[11px] uppercase text-slate-900">
-                {statement.students.map((student, sIdx) => {
-                  return (
-                    <tr key={sIdx}>
-                      <td className="py-4 px-4 font-black border border-slate-900 bg-slate-50/50 sticky left-0 z-10">
-                        {student.studentName}
+              <tbody className="text-[11px] uppercase text-slate-900 font-bold">
+                {statement.students.map((student, sIdx) => (
+                  <tr key={sIdx} className={cn("hover:bg-slate-50 transition-colors", sIdx % 2 === 0 ? "bg-white" : "bg-slate-50/30")}>
+                    <td className="py-5 px-6 border-r border-slate-100 sticky left-0 bg-inherit z-10 border-b border-slate-100">
+                      {student.studentName}
+                    </td>
+                    {student.payments.map((p, pIdx) => (
+                      <td key={pIdx} className="py-5 px-4 text-right border-r border-slate-100 border-b border-slate-100 whitespace-nowrap">
+                        <div className="flex flex-col items-end gap-1">
+                           <span className={p.amountPaid > 0 ? 'text-emerald-600' : 'text-slate-300'}>
+                             {p.amountPaid > 0 ? p.amountPaid.toLocaleString() : '—'}
+                           </span>
+                           {p.balance > 0 && (
+                             <span className="text-[9px] text-rose-500 font-black">
+                               ({p.balance.toLocaleString()})
+                             </span>
+                           )}
+                        </div>
                       </td>
-                      {student.payments.map((p, pIdx) => {
-                        const paid = p.amountPaid;
-                        const bal = p.balance;
-                        
-                        return (
-                          <td key={pIdx} className="py-4 px-2 text-right border border-slate-900 font-bold whitespace-nowrap">
-                            <div className="flex flex-col items-end">
-                               <span className={paid > 0 ? 'text-emerald-600' : 'text-slate-300'}>{paid > 0 ? paid.toLocaleString() : '—'}</span>
-                               {bal > 1 && <span className="text-[9px] text-rose-500 font-black mt-0.5">({bal.toLocaleString()})</span>}
-                            </div>
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  );
-                })}
+                    ))}
+                  </tr>
+                ))}
               </tbody>
-              <tfoot className="font-mono">
-                 <tr className="bg-slate-100 italic">
-                    <td className="py-5 px-4 text-[11px] font-black text-slate-900 uppercase tracking-widest border border-slate-900 sticky left-0 bg-slate-100 z-10 font-bold">Consolidated</td>
+              <tfoot>
+                 <tr className="bg-slate-50 font-black">
+                    <td className="py-6 px-6 text-[11px] uppercase tracking-widest border-r border-slate-200 sticky left-0 bg-slate-50 z-10 border-t-2 border-slate-900">Total Monthly Paid</td>
                     {monthKeys.map((_, mkIdx) => {
                         const monthTotalPaid = statement.students.reduce((sum, s) => sum + s.payments[mkIdx].amountPaid, 0);
                         const monthTotalBal = statement.students.reduce((sum, s) => sum + s.payments[mkIdx].balance, 0);
                         return (
-                            <td key={mkIdx} className="py-5 px-2 text-right border border-slate-900">
+                            <td key={mkIdx} className="py-6 px-4 text-right border-r border-slate-200 border-t-2 border-slate-900">
                                 <div className="flex flex-col items-end">
-                                   <span className="text-[10px] font-black text-emerald-800">{monthTotalPaid > 0 ? monthTotalPaid.toLocaleString() : '—'}</span>
-                                   {monthTotalBal > 1 && <span className="text-[9px] text-rose-600 font-black">({monthTotalBal.toLocaleString()})</span>}
+                                   <span className="text-[11px] text-emerald-700">{monthTotalPaid > 0 ? monthTotalPaid.toLocaleString() : '—'}</span>
+                                   {monthTotalBal > 0 && <span className="text-[9px] text-rose-600">({monthTotalBal.toLocaleString()})</span>}
                                 </div>
                             </td>
                         );
@@ -265,14 +293,41 @@ export default function StatementPage({ params }: { params: Promise<{ id: string
             </table>
           </div>
 
-          {/* Institutional Stamp Area */}
-          <div className="mt-20 flex justify-end">
-             <div className="flex flex-col items-center">
-                <div className="h-32 w-32 border-4 border-dashed border-slate-200 rounded-full flex items-center justify-center mb-4">
-                    <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest text-center px-4 leading-relaxed">Official Institution Stamp Required</p>
+          {/* Institutional Recap */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-20 items-end">
+             <div className="space-y-6">
+                <div className="p-8 bg-slate-50 rounded-2xl border border-slate-100 inline-block min-w-[300px]">
+                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Financial Summary</p>
+                   <div className="space-y-4">
+                      <div className="flex justify-between items-end">
+                         <span className="text-xs font-bold text-slate-500 uppercase">Total Paid</span>
+                         <span className="text-xl font-black text-emerald-600">KES {statement.grandSummary.totalPaid.toLocaleString()}</span>
+                      </div>
+                      <div className="h-px bg-slate-200" />
+                      <div className="flex justify-between items-end">
+                         <span className="text-xs font-bold text-slate-500 uppercase">Outstanding Balance</span>
+                         <span className="text-xl font-black text-rose-500">KES {statement.grandSummary.totalBalance.toLocaleString()}</span>
+                      </div>
+                   </div>
                 </div>
-                <div className="text-[11px] font-black text-slate-400 uppercase tracking-[0.4em] italic leading-none">Institutional Verification</div>
+                <p className="text-[10px] font-bold text-slate-400 uppercase leading-relaxed max-w-sm">
+                   Please verify all transactions. For discrepancies, contact the finance office with your original payment receipts.
+                </p>
              </div>
+
+             <div className="flex flex-col items-center md:items-end gap-6">
+                <div className="h-40 w-40 border-4 border-dashed border-slate-100 rounded-full flex flex-col items-center justify-center p-4 text-center">
+                    <p className="text-[9px] font-black text-slate-300 uppercase tracking-[0.2em] leading-relaxed">Seal of Authenticity Required</p>
+                </div>
+                <div className="text-right border-t border-slate-900 pt-4 w-64">
+                   <p className="text-[11px] font-black text-slate-900 uppercase tracking-widest leading-none mb-2">Institutional Administrator</p>
+                   <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest tracking-[0.4em]">Signature & Stamp</p>
+                </div>
+             </div>
+          </div>
+
+          <div className="mt-20 pt-8 border-t border-slate-50 text-center">
+             <p className="text-[9px] font-bold text-slate-300 uppercase tracking-[0.5em] italic">This is a system generated document. Manual stamp required for legal validity.</p>
           </div>
         </div>
       </div>
@@ -300,24 +355,11 @@ export default function StatementPage({ params }: { params: Promise<{ id: string
             box-shadow: none !important;
           }
           @page { 
-            margin: 1.5cm; 
+            margin: 0;
             size: a4 landscape; 
           }
-          table { 
-            border-collapse: collapse !important; 
-            width: 100% !important; 
-            border: 1px solid #000 !important; 
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-          }
-          th, td { 
-            border: 1px solid #000 !important; 
-            padding: 6px !important; 
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-          }
-          .sticky { 
-            position: static !important; 
+          .custom-scrollbar::-webkit-scrollbar {
+            display: none;
           }
         }
       `}</style>

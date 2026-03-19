@@ -29,7 +29,17 @@ export default function SettingsPage() {
       .then(data => {
         if (Array.isArray(data)) {
           const map: SettingsMap = {};
+          // Standardize everything to a map
           data.forEach(s => map[s.key] = s.value);
+          
+          // Fallback logic for legacy keys
+          if (!map.name && map.madrasah_name) map.name = map.madrasah_name;
+          if (!map.address && map.madrasah_address) map.address = map.madrasah_address;
+          if (!map.phone && map.madrasah_phone) map.phone = map.madrasah_phone;
+          if (!map.email && map.madrasah_email) map.email = map.madrasah_email;
+          if (!map.logo && map.madrasah_logo) map.logo = map.madrasah_logo;
+          if (!map.favicon && map.madrasah_favicon) map.favicon = map.madrasah_favicon;
+          
           setSettings(map);
         } else {
           setSettings(data);
@@ -116,12 +126,6 @@ export default function SettingsPage() {
                       className="flex-1 rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary transition-all outline-none"
                       placeholder="e.g. Madrasah Academic"
                    />
-                   <button 
-                     onClick={() => handleSave('madrasah_name', settings.madrasah_name)}
-                     className="bg-slate-900 text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-slate-800"
-                   >
-                     Save
-                   </button>
                  </div>
                </div>
 
@@ -132,18 +136,13 @@ export default function SettingsPage() {
                        <MapPin className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
                        <textarea 
                           rows={2}
-                          value={settings.madrasah_address || ''} 
-                          onChange={(e) => handleChange('madrasah_address', e.target.value)}
+                          value={settings.address || ''} 
+                          onChange={(e) => handleChange('address', e.target.value)}
+                          onBlur={(e) => handleSave('address', e.target.value)}
                           className="w-full rounded-xl border border-slate-200 pl-10 pr-4 py-2 text-sm focus:border-primary focus:ring-1 focus:ring-primary transition-all outline-none resize-none"
                           placeholder="Madrasah Physical Location"
                        />
                     </div>
-                    <button 
-                     onClick={() => handleSave('madrasah_address', settings.madrasah_address)}
-                     className="bg-slate-900 text-white px-4 h-[45px] rounded-xl text-xs font-bold hover:bg-slate-800 self-start"
-                   >
-                     Save
-                   </button>
                  </div>
                </div>
             </div>
@@ -162,12 +161,12 @@ export default function SettingsPage() {
                        <Phone className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
                        <input 
                           type="text" 
-                          value={settings.madrasah_phone || ''} 
-                          onChange={(e) => handleChange('madrasah_phone', e.target.value)}
+                          value={settings.phone || ''} 
+                          onChange={(e) => handleChange('phone', e.target.value)}
+                          onBlur={(e) => handleSave('phone', e.target.value)}
                           className="w-full rounded-xl border border-slate-200 pl-10 pr-4 py-2 text-sm outline-none focus:ring-1 focus:ring-primary"
                        />
                     </div>
-                    <button onClick={() => handleSave('madrasah_phone', settings.madrasah_phone)} className="bg-slate-100 p-2.5 rounded-lg hover:bg-slate-200"><Check className="h-4 w-4 text-slate-600" /></button>
                   </div>
                </div>
                <div className="grid gap-2">
@@ -177,12 +176,12 @@ export default function SettingsPage() {
                        <Mail className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
                        <input 
                           type="email" 
-                          value={settings.madrasah_email || ''} 
-                          onChange={(e) => handleChange('madrasah_email', e.target.value)}
+                          value={settings.email || ''} 
+                          onChange={(e) => handleChange('email', e.target.value)}
+                          onBlur={(e) => handleSave('email', e.target.value)}
                           className="w-full rounded-xl border border-slate-200 pl-10 pr-4 py-2 text-sm outline-none focus:ring-1 focus:ring-primary"
                        />
                     </div>
-                    <button onClick={() => handleSave('madrasah_email', settings.madrasah_email)} className="bg-slate-100 p-2.5 rounded-lg hover:bg-slate-200"><Check className="h-4 w-4 text-slate-600" /></button>
                   </div>
                </div>
             </div>
