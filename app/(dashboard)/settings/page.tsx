@@ -14,6 +14,7 @@ import {
   ExternalLink
 } from 'lucide-react';
 import Swal from 'sweetalert2';
+import { ImageUpload } from '@/components/ui/image-upload';
 
 type SettingsMap = Record<string, string>;
 
@@ -183,53 +184,29 @@ export default function SettingsPage() {
              {/* Logo */}
              <div className="space-y-3">
                 <label className="text-xs font-black uppercase tracking-widest text-slate-400">Institutional Logo</label>
-                <div className="group relative aspect-square rounded-2xl bg-white border-2 border-dashed border-slate-200 flex flex-col items-center justify-center p-4 transition-all hover:bg-slate-100 hover:border-primary/40">
-                   {settings.madrasah_logo ? (
-                     <img src={settings.madrasah_logo} alt="Logo" className="max-h-full object-contain" />
-                   ) : (
-                     <>
-                        <ImageIcon className="h-10 w-10 text-slate-200 mb-2" />
-                        <p className="text-[10px] font-bold text-slate-400 text-center uppercase tracking-tighter italic">Upload institutional logo</p>
-                     </>
-                   )}
-                   <button className="absolute inset-0 flex items-center justify-center bg-primary/80 text-white opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl">
-                      <Upload className="h-5 w-5" />
-                   </button>
-                </div>
-                <div className="flex gap-2">
-                   <input 
-                     type="text" 
-                     className="flex-1 text-[10px] rounded-lg border border-slate-100 px-2 py-1 outline-none text-slate-400"
-                     placeholder="Logo URL"
-                     value={settings.madrasah_logo || ''}
-                     onChange={(e) => handleChange('madrasah_logo', e.target.value)}
-                   />
-                   <button onClick={() => handleSave('madrasah_logo', settings.madrasah_logo)} className="text-xs font-bold text-primary hover:underline">Apply</button>
-                </div>
+                <ImageUpload 
+                  label="Select Logo"
+                  currentValue={settings.madrasah_logo}
+                  onSuccess={(url) => handleSave('madrasah_logo', url)}
+                  folder="/branding/logo"
+                />
+                <p className="text-[10px] text-slate-400 italic">Recommended: 512x512px PNG/SVG</p>
              </div>
 
              {/* Favicon */}
              <div className="space-y-3">
                 <label className="text-xs font-black uppercase tracking-widest text-slate-400 font-mono">Favicon (Small Icon)</label>
                 <div className="flex items-center gap-4">
-                   <div className="h-12 w-12 rounded-xl bg-white border border-slate-200 flex items-center justify-center shadow-sm">
-                      {settings.madrasah_favicon ? (
-                        <img src={settings.madrasah_favicon} alt="favicon" className="h-6 w-6" />
-                      ) : (
-                        <ImageIcon className="h-6 w-6 text-slate-200" />
-                      )}
-                   </div>
-                   <div className="flex-1 space-y-2">
-                      <input 
-                        type="text" 
-                        className="w-full text-[10px] rounded-lg border border-slate-100 px-2 py-1 outline-none text-slate-400"
-                        placeholder="Favicon URL"
-                        value={settings.madrasah_favicon || ''}
-                        onChange={(e) => handleChange('madrasah_favicon', e.target.value)}
+                   <div className="flex-1">
+                      <ImageUpload 
+                        label="Select Favicon"
+                        currentValue={settings.madrasah_favicon}
+                        onSuccess={(url) => handleSave('madrasah_favicon', url)}
+                        folder="/branding/favicon"
                       />
-                      <button onClick={() => handleSave('madrasah_favicon', settings.madrasah_favicon)} className="text-[10px] font-black text-primary uppercase tracking-widest">Apply Favicon</button>
                    </div>
                 </div>
+                <p className="text-[10px] text-slate-400 italic">Recommended: 32x32px .ico or .png</p>
              </div>
            </section>
 

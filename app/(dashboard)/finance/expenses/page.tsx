@@ -14,7 +14,9 @@ import {
   Zap,
   Hammer,
   Truck,
-  MoreVertical
+  MoreVertical,
+  Receipt,
+  Download
 } from 'lucide-react';
 import Swal from 'sweetalert2';
 
@@ -134,26 +136,57 @@ export default function ExpensesPage() {
     }
   };
 
+  const exportToCSV = () => {
+    const headers = ['Date', 'Description', 'Category', 'Amount (KES)'];
+    const rows = expenses.map(e => [
+      new Date(e.date).toLocaleDateString(),
+      e.description,
+      e.category,
+      e.amount
+    ]);
+
+    const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `expenses_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="p-6 md:p-10 space-y-8 min-h-screen bg-slate-50/50">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-slate-200">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-6 border-b border-slate-200">
         <div className="flex items-center gap-4">
-          <div className="h-14 w-14 flex items-center justify-center rounded-2xl bg-slate-900 text-white shadow-xl shadow-slate-900/10">
-            <Wallet className="h-7 w-7" />
+          <div className="h-14 w-14 flex items-center justify-center rounded-2xl bg-slate-900 text-white shadow-xl">
+            <Receipt className="h-7 w-7" />
           </div>
           <div>
-            <h1 className="text-3xl font-black tracking-tighter text-slate-900 uppercase">Expense Tracker</h1>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Institutional Spending & Payables</p>
+            <h1 className="text-3xl font-black tracking-tighter text-slate-900 uppercase italic">Institutional Expenses</h1>
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Operational Outflow Tracking</p>
           </div>
         </div>
-        <button 
-          onClick={() => setShowAddModal(true)}
-          className="flex items-center gap-2 rounded-2xl bg-slate-900 px-6 py-4 text-xs font-black text-white shadow-xl hover:bg-slate-800 transition-all active:scale-95 uppercase tracking-widest"
-        >
-          <Plus className="h-4 w-4" />
-          Record New Expense
-        </button>
+
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={exportToCSV}
+            className="flex items-center gap-2 bg-white border border-slate-200 text-slate-900 px-5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all shadow-sm"
+          >
+            <Download className="h-4 w-4" />
+            Export CSV
+          </button>
+          <button 
+            onClick={() => setShowAddModal(true)}
+            className="flex items-center gap-2 bg-primary text-white px-5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-primary/90 transition-all shadow-lg shadow-primary/20"
+          >
+            <Plus className="h-4 w-4" />
+            Log New Expense
+          </button>
+        </div>
       </div>
 
       {/* Summary Row */}

@@ -33,6 +33,7 @@ type PayrollRecord = {
   month: number;
   year: number;
   paymentDate: string;
+  isAdvance: boolean;
   notes: string | null;
 };
 
@@ -43,13 +44,14 @@ const MONTHS = [
 
 export default function PayrollPage() {
   const [teachers, setTeachers] = useState<Teacher[]>([]);
-  const [payrollState, setPayrollState] = useState<Record<string, PayrollRecord>>({});
+  const [payrollMatrix, setPayrollMatrix] = useState<Record<string, PayrollRecord[]>>({});
   const [loading, setLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null);
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paymentNotes, setPaymentNotes] = useState('');
+  const [isAdvance, setIsAdvance] = useState(false);
 
   const fetchData = async () => {
     setLoading(true);
@@ -63,11 +65,14 @@ export default function PayrollPage() {
       
       setTeachers(tData);
       
-      const pMap: Record<string, PayrollRecord> = {};
+      const pMap: Record<string, PayrollRecord[]> = {};
       if (Array.isArray(pData)) {
-        pData.forEach(r => { pMap[r.userId] = r; });
+        pData.forEach(r => { 
+          if (!pMap[r.userId]) pMap[r.userId] = [];
+          pMap[r.userId].push(r);
+        });
       }
-      setPayrollState(pMap);
+      setPayrollMatrix(pMap);
     } catch (err) {
       console.error(err);
     } finally {
@@ -93,7 +98,8 @@ export default function PayrollPage() {
           month: selectedMonth,
           year: selectedYear,
           paymentDate: new Date().toISOString().split('T')[0],
-          notes: paymentNotes
+          notes: paymentNotes,
+          isAdvance: isAdvance
         }),
       });
 
@@ -102,11 +108,12 @@ export default function PayrollPage() {
       setSelectedTeacher(null);
       setPaymentAmount('');
       setPaymentNotes('');
+      setIsAdvance(false);
       fetchData();
 
       Swal.fire({
         icon: 'success',
-        title: 'Payment Recorded',
+        title: isAdvance ? 'Advance Recorded' : 'Payment Recorded',
         timer: 1500,
         showConfirmButton: false,
         toast: true,
@@ -117,7 +124,42 @@ export default function PayrollPage() {
     }
   };
 
-  const totalPayroll = Object.values(payrollState).reduce((sum, p) => sum + Number(p.amount), 0);
+  const exportToCSV = () => {
+    const headers = ['Staff Name', 'Username', 'Month', 'Year', 'Base Salary', 'Advance Paid', 'Final Paid', 'Total Paid', 'Balance'];
+    const rows = teachers.map(t => {
+      const records = payrollMatrix[t.id] || [];
+      const advances = records.filter(r => r.isAdvance).reduce((sum, r) => sum + Number(r.amount), 0);
+      const finals = records.filter(r => !r.isAdvance).reduce((sum, r) => sum + Number(r.amount), 0);
+      const baseSalary = t.salary ? Number(t.salary) : 0;
+      const totalPaid = advances + finals;
+      return [
+        t.name || t.username,
+        t.username,
+        MONTHS[selectedMonth - 1],
+        selectedYear,
+        baseSalary,
+        advances,
+        finals,
+        totalPaid,
+        baseSalary - totalPaid
+      ];
+    });
+
+    const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `payroll_${MONTHS[selectedMonth-1]}_${selectedYear}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const totalPayroll = Object.values(payrollMatrix)
+    .flat()
+    .reduce((sum, p) => sum + Number(p.amount), 0);
 
   return (
     <div className="p-6 md:p-10 space-y-8 min-h-screen bg-slate-50/50">
@@ -133,23 +175,32 @@ export default function PayrollPage() {
           </div>
         </div>
 
-        {/* Month/Year Selector */}
-        <div className="flex items-center gap-2 bg-white p-2 rounded-2xl border border-slate-200 shadow-sm">
-           <button 
-             onClick={() => setSelectedMonth(prev => prev === 1 ? 12 : prev - 1)}
-             className="p-2 hover:bg-slate-50 rounded-xl transition-colors"
-           >
-              <ChevronLeft className="h-5 w-5 text-slate-400" />
-           </button>
-           <div className="px-4 text-center min-w-[150px]">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">{selectedYear}</p>
-              <p className="text-sm font-black text-slate-900 uppercase">{MONTHS[selectedMonth - 1]}</p>
+        <div className="flex items-center gap-4">
+           {/* Month/Year Selector */}
+           <div className="flex items-center gap-2 bg-white p-2 rounded-2xl border border-slate-200 shadow-sm">
+              <button 
+                onClick={() => setSelectedMonth(prev => prev === 1 ? 12 : prev - 1)}
+                className="p-2 hover:bg-slate-50 rounded-xl transition-colors"
+              >
+                 <ChevronLeft className="h-5 w-5 text-slate-400" />
+              </button>
+              <div className="px-4 text-center min-w-[150px]">
+                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">{selectedYear}</p>
+                 <p className="text-sm font-black text-slate-900 uppercase">{MONTHS[selectedMonth - 1]}</p>
+              </div>
+              <button 
+                onClick={() => setSelectedMonth(prev => prev === 12 ? 1 : prev + 1)}
+                className="p-2 hover:bg-slate-50 rounded-xl transition-colors"
+              >
+                 <ChevronRight className="h-5 w-5 text-slate-400" />
+              </button>
            </div>
            <button 
-             onClick={() => setSelectedMonth(prev => prev === 12 ? 1 : prev + 1)}
-             className="p-2 hover:bg-slate-50 rounded-xl transition-colors"
+             onClick={exportToCSV}
+             className="flex items-center gap-2 bg-slate-900 text-white px-5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-lg"
            >
-              <ChevronRight className="h-5 w-5 text-slate-400" />
+              <FileText className="h-4 w-4" />
+              Export CSV
            </button>
         </div>
       </div>
@@ -183,7 +234,8 @@ export default function PayrollPage() {
             <tr className="bg-slate-50/50">
               <th className="py-5 px-8 text-[10px] font-black text-slate-400 uppercase tracking-widest">Teacher / Staff</th>
               <th className="py-5 px-8 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Target Salary</th>
-              <th className="py-5 px-8 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Amount Paid</th>
+              <th className="py-5 px-8 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Advances</th>
+              <th className="py-5 px-8 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Final/Total</th>
               <th className="py-5 px-8 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Status</th>
               <th className="py-5 px-8 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Action</th>
             </tr>
@@ -191,7 +243,7 @@ export default function PayrollPage() {
           <tbody className="divide-y divide-slate-50">
             {loading ? (
               <tr>
-                <td colSpan={5} className="py-20 text-center">
+                <td colSpan={6} className="py-20 text-center">
                    <div className="flex flex-col items-center gap-4">
                       <Loader2 className="h-8 w-8 animate-spin text-primary" />
                       <p className="text-[10px] font-black text-primary uppercase tracking-widest animate-pulse">Syncing Payroll Data...</p>
@@ -200,13 +252,16 @@ export default function PayrollPage() {
               </tr>
             ) : teachers.length === 0 ? (
               <tr>
-                <td colSpan={5} className="py-20 text-center text-slate-400 uppercase font-black text-xs">No teachers found.</td>
+                <td colSpan={6} className="py-20 text-center text-slate-400 uppercase font-black text-xs">No teachers found.</td>
               </tr>
             ) : (
               teachers.map((t) => {
-                const record = payrollState[t.id];
-                const isPaid = !!record;
+                const records = payrollMatrix[t.id] || [];
+                const advances = records.filter(r => r.isAdvance).reduce((sum, r) => sum + Number(r.amount), 0);
+                const finals = records.filter(r => !r.isAdvance).reduce((sum, r) => sum + Number(r.amount), 0);
+                const totalPaid = advances + finals;
                 const baseSalary = t.salary ? Number(t.salary) : 0;
+                const isFullyPaid = totalPaid >= baseSalary && baseSalary > 0;
                 
                 return (
                   <tr key={t.id} className="group hover:bg-slate-50/50 transition-colors">
@@ -227,15 +282,28 @@ export default function PayrollPage() {
                        </p>
                     </td>
                     <td className="py-6 px-8 text-right">
-                       <p className={`text-lg font-black ${isPaid ? 'text-slate-900' : 'text-slate-200'}`}>
-                          {isPaid ? `KES ${record.amount.toLocaleString()}` : '—'}
+                       <p className={`text-sm font-black ${advances > 0 ? 'text-amber-600' : 'text-slate-100'}`}>
+                          {advances > 0 ? `KES ${advances.toLocaleString()}` : '—'}
                        </p>
                     </td>
+                    <td className="py-6 px-8 text-right">
+                       <div className="flex flex-col items-end gap-1">
+                          <p className={`text-lg font-black ${totalPaid > 0 ? 'text-slate-900' : 'text-slate-200'}`}>
+                             {totalPaid > 0 ? `KES ${totalPaid.toLocaleString()}` : '—'}
+                          </p>
+                          {finals > 0 && advances > 0 && <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Incl. Final Pmt</p>}
+                       </div>
+                    </td>
                     <td className="py-6 px-8 text-center">
-                       {isPaid ? (
+                       {isFullyPaid ? (
                          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100">
                             <CheckCircle2 className="h-3 w-3" />
-                            <span className="text-[10px] font-black uppercase tracking-widest">Paid</span>
+                            <span className="text-[10px] font-black uppercase tracking-widest">Settled</span>
+                         </div>
+                       ) : totalPaid > 0 ? (
+                         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 text-amber-600 border border-amber-100">
+                            <AlertCircle className="h-3 w-3" />
+                            <span className="text-[10px] font-black uppercase tracking-widest">Partial</span>
                          </div>
                        ) : (
                          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-50 text-slate-400 border border-slate-100">
@@ -248,7 +316,8 @@ export default function PayrollPage() {
                        <button 
                          onClick={() => {
                            setSelectedTeacher(t);
-                           setPaymentAmount(t.salary?.toString() || '');
+                           const remaining = baseSalary - totalPaid;
+                           setPaymentAmount(remaining > 0 ? remaining.toString() : '');
                          }}
                          className="p-3 rounded-xl text-slate-400 hover:text-primary hover:bg-primary/5 transition-all"
                        >
@@ -274,7 +343,7 @@ export default function PayrollPage() {
                          <Banknote className="h-6 w-6 text-primary" />
                       </div>
                       <div>
-                        <h2 className="text-xl font-black tracking-tighter text-slate-900 uppercase leading-none mb-2">Record Salary</h2>
+                        <h2 className="text-xl font-black tracking-tighter text-slate-900 uppercase leading-none mb-2">Record Payment</h2>
                         <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Disbursement for {MONTHS[selectedMonth - 1]}</p>
                       </div>
                    </div>
@@ -283,12 +352,32 @@ export default function PayrollPage() {
                    </button>
                 </div>
 
-                <div className="p-6 bg-slate-50 rounded-2xl space-y-2 border border-slate-100">
-                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Payee Identification</p>
-                   <div className="flex justify-between items-end">
-                      <p className="text-lg font-black text-slate-900 uppercase">{selectedTeacher.name || selectedTeacher.username}</p>
-                      <p className="text-xs font-bold text-slate-500 font-mono">ID: {selectedTeacher.id.slice(-8).toUpperCase()}</p>
+                <div className="p-6 bg-slate-50 rounded-2xl space-y-4 border border-slate-100">
+                   <div className="flex justify-between items-start">
+                      <div>
+                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Payee</p>
+                         <p className="text-lg font-black text-slate-900 uppercase leading-none">{selectedTeacher.name || selectedTeacher.username}</p>
+                      </div>
+                      <div className="text-right">
+                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Paid This Month</p>
+                         <p className="text-lg font-black text-emerald-600 leading-none">
+                            KES {(payrollMatrix[selectedTeacher.id] || []).reduce((s,p) => s + Number(p.amount), 0).toLocaleString()}
+                         </p>
+                      </div>
                    </div>
+
+                   <label className="flex items-center gap-3 p-4 bg-white rounded-xl border border-slate-100 cursor-pointer hover:border-primary/30 transition-all">
+                      <input 
+                        type="checkbox" 
+                        checked={isAdvance}
+                        onChange={(e) => setIsAdvance(e.target.checked)}
+                        className="h-5 w-5 rounded-lg border-slate-200 text-primary focus:ring-primary"
+                      />
+                      <div>
+                         <p className="text-sm font-black text-slate-900 uppercase">Mark as Salary Advance</p>
+                         <p className="text-[10px] font-bold text-slate-400 italic">This payment is an advance on the {MONTHS[selectedMonth-1]} salary.</p>
+                      </div>
+                   </label>
                 </div>
 
                 <form onSubmit={handleRecordPayment} className="space-y-6">

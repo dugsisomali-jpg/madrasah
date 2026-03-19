@@ -72,6 +72,38 @@ export default function FinanceReportPage() {
 
   const expenseTotal = Object.values(breakdown.expenses).reduce((a, b) => a + b, 0);
 
+  const exportToCSV = () => {
+    if (!data) return;
+    const { summary, breakdown } = data;
+    
+    // Summary Section
+    let csv = "FINANCIAL SUMMARY REPORT\n";
+    csv += `Date Range,${filters.from || 'All Start'} to ${filters.to || 'Present'}\n\n`;
+    csv += "Metric,Value (KES)\n";
+    csv += `Total Income,${summary.totalIncome}\n`;
+    csv += `Total Expenses,${summary.totalExpenses}\n`;
+    csv += `Net Profit/Balance,${summary.netProfit}\n\n`;
+
+    // Category Breakdown Section
+    csv += "EXPENSE BREAKDOWN BY CATEGORY\n";
+    csv += "Category,Amount (KES),Percentage\n";
+    const total = Object.values(breakdown.expenses).reduce((a,b) => a+b, 0);
+    Object.entries(breakdown.expenses).forEach(([cat, amt]) => {
+      const pct = total > 0 ? (amt / total * 100).toFixed(1) : 0;
+      csv += `${cat},${amt},${pct}%\n`;
+    });
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `financial_report_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="p-6 md:p-10 space-y-10 min-h-screen bg-slate-50/50">
       {/* Header */}
@@ -103,7 +135,10 @@ export default function FinanceReportPage() {
                 className="text-xs font-black uppercase text-slate-600 outline-none"
               />
            </div>
-           <button className="p-3 bg-white rounded-2xl border border-slate-200 text-slate-400 hover:text-slate-900 shadow-sm transition-all active:scale-95">
+           <button 
+             onClick={exportToCSV}
+             className="p-3 bg-white rounded-2xl border border-slate-200 text-slate-400 hover:text-slate-900 shadow-sm transition-all active:scale-95"
+           >
               <Download className="h-5 w-5" />
            </button>
         </div>

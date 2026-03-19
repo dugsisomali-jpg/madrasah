@@ -42,25 +42,20 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { userId, amount, month, year, paymentDate, notes } = body;
+    const { userId, amount, month, year, paymentDate, notes, isAdvance } = body;
 
     if (!userId || !amount || !month || !year || !paymentDate) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    const payroll = await prisma.salaryPayment.upsert({
-      where: { userId_month_year: { userId, month: parseInt(month), year: parseInt(year) } },
-      update: {
-        amount: toNum(amount),
-        paymentDate: new Date(paymentDate),
-        notes,
-      },
-      create: {
+    const payroll = await prisma.salaryPayment.create({
+      data: {
         userId,
         amount: toNum(amount),
         month: parseInt(month),
         year: parseInt(year),
         paymentDate: new Date(paymentDate),
+        isAdvance: !!isAdvance,
         notes,
       },
     });

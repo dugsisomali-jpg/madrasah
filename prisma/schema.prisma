@@ -231,13 +231,13 @@ model SalaryPayment {
   amount      Decimal  @db.Decimal(10, 2)
   month       Int
   year        Int
-  paymentDate DateTime @db.Date
+  paymentDate DateTime @default(now())
+  isAdvance   Boolean  @default(false)
   notes       String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  User        User     @relation("UserSalaries", fields: [userId], references: [id], onDelete: Cascade)
+  User        User     @relation("UserSalaries", fields: [userId], references: [id])
 
-  @@unique([userId, month, year])
   @@index([userId])
 }
 
