@@ -196,13 +196,13 @@ export function PaymentsContent() {
   }, []);
 
   useEffect(() => {
-    if (parentModalOpen || (rangeModalOpen && rangeMode === 'parent')) {
+    if (parentModalOpen || statementModalOpen || (rangeModalOpen && rangeMode === 'parent')) {
       fetch('/api/users/parents?hasStudents=true')
         .then((r) => r.json())
         .then((data) => setParents(Array.isArray(data) ? data : []))
         .catch(() => setParents([]));
     }
-  }, [JSON.stringify([parentModalOpen, rangeModalOpen, rangeMode])]);
+  }, [parentModalOpen, statementModalOpen, rangeModalOpen, rangeMode]);
 
   useEffect(() => {
     if (!parentId || !parentPeriod) {
