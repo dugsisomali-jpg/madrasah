@@ -34,10 +34,14 @@ const navItems: NavItem[] = [
   { href: '/teachers', label: 'Teachers', icon: GraduationCap, permission: 'teachers.read' },
   { href: '/payments', label: 'Payments', icon: Banknote, permission: 'payments.read' },
   { href: '/receivables', label: 'Receivables', icon: Wallet, permission: 'payments.read' },
+  { href: '/finance/expenses', label: 'Expenses', icon: Wallet, permission: 'expenses.read' },
+  { href: '/finance/payroll', label: 'Payroll', icon: Users, permission: 'payroll.read' },
   { href: '/exams', label: 'Exams', icon: FileCheck, permission: 'exams.manage' },
   { href: '/subjects', label: 'Subjects', icon: BookMarked, permission: 'subjects.read' },
   { href: '/attendance', label: 'Attendance', icon: ClipboardCheck, permission: 'attendance.read' },
+  { href: '/reports/finance', label: 'Reports', icon: LayoutDashboard, permission: 'reports.read' },
   { href: '/user-management', label: 'User Management', icon: Shield, permission: 'users.read' },
+  { href: '/settings', label: 'Settings', icon: Menu, permission: 'system.manage' },
 ];
 
 function NavLinks({ 

@@ -19,6 +19,8 @@ model User {
   studentsTaught        Student[]              @relation("StudentTeacher")
   memorizationRecorded  memorization_records[] @relation("MemorizationTeacher")
   parentReceiptBatches  ReceiptBatch[]         @relation("ParentReceiptBatches")
+  salaryPayments        SalaryPayment[]        @relation("UserSalaries")
+  salary                Decimal?               @db.Decimal(10, 2)
 }
 
 model Role {
@@ -211,4 +213,38 @@ enum ExamType {
 enum MemorizationType {
   SABAQ
   MURAJAA
+}
+
+model Expense {
+  id          String   @id @default(cuid())
+  description String
+  amount      Decimal  @db.Decimal(10, 2)
+  category    String
+  date        DateTime @db.Date
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model SalaryPayment {
+  id          String   @id @default(cuid())
+  userId      String
+  amount      Decimal  @db.Decimal(10, 2)
+  month       Int
+  year        Int
+  paymentDate DateTime @db.Date
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  User        User     @relation("UserSalaries", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, month, year])
+  @@index([userId])
+}
+
+model SystemSetting {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       String   @db.Text
+  description String?
+  updatedAt   DateTime @updatedAt
 }
