@@ -20,8 +20,8 @@ export async function GET(
   const from = searchParams.get('from'); // YYYY-MM
   const to = searchParams.get('to');     // YYYY-MM
 
-  let fromYear: number | undefined, fromMonth: number | undefined;
-  let toYear: number | undefined, toMonth: number | undefined;
+  let fromYear: number = 2026, fromMonth: number = 1;
+  let toYear: number = 2026, toMonth: number = 12;
 
   if (from) {
     const [y, m] = from.split('-').map(Number);
@@ -31,6 +31,10 @@ export async function GET(
     const [y, m] = to.split('-').map(Number);
     if (!isNaN(y) && !isNaN(m)) { toYear = y; toMonth = m; }
   }
+
+  const now = new Date();
+  const nowY = now.getFullYear();
+  const nowM = now.getMonth() + 1;
 
   try {
     const parent = await prisma.user.findUnique({
@@ -48,8 +52,14 @@ export async function GET(
         id: true,
         name: true,
         fee: true,
+        enrollmentDate: true,
         Payment: {
-          orderBy: [{ year: 'desc' }, { month: 'desc' }],
+          where: {
+            AND: [
+              { OR: [{ year: { gt: fromYear } }, { AND: [{ year: fromYear }, { month: { gte: fromMonth } }] }] },
+              { OR: [{ year: { lt: toYear } }, { AND: [{ year: toYear }, { month: { lte: toMonth } }] }] },
+            ]
+          },
           select: {
             id: true,
             month: true,
@@ -60,54 +70,57 @@ export async function GET(
             discount: true,
             amountPaid: true,
             balanceDueDate: true,
-            receipts: {
-              select: {
-                id: true,
-                amount: true,
-                date: true,
-                receiptNumber: true,
-              },
-            },
           },
         },
       },
     });
 
+    // Generate month keys for the range
+    const rangeKeys: string[] = [];
+    let cY = fromYear, cM = fromMonth;
+    while (cY < toYear || (cY === toYear && cM <= toMonth)) {
+      rangeKeys.push(`${cY}-${String(cM).padStart(2, '0')}`);
+      cM++;
+      if (cM > 12) { cM = 1; cY++; }
+    }
+
     const statement = {
       parentName: parent.name || parent.username,
       generatedAt: new Date().toISOString(),
       students: students.map(s => {
-        let studentPayments = s.Payment.map(p => {
-          const balance = toNum(p.totalDue) - toNum(p.discount) - toNum(p.amountPaid);
-          return {
-            id: p.id,
-            month: p.month,
-            year: p.year,
-            feeAmount: toNum(p.feeAmount),
-            balanceCarriedOver: toNum(p.balanceCarriedOver),
-            totalDue: toNum(p.totalDue),
-            discount: toNum(p.discount),
-            amountPaid: toNum(p.amountPaid),
-            balance: Math.max(0, balance),
-            balanceDueDate: p.balanceDueDate,
-            receipts: p.receipts,
-          };
+        const studentPayments = rangeKeys.map(key => {
+          const [y, m] = key.split('-').map(Number);
+          const p = s.Payment.find(pay => pay.year === y && pay.month === m);
+          
+          if (p) {
+            const balance = toNum(p.totalDue) - toNum(p.discount) - toNum(p.amountPaid);
+            return {
+              id: p.id,
+              month: p.month,
+              year: p.year,
+              feeAmount: toNum(p.feeAmount),
+              amountPaid: toNum(p.amountPaid),
+              balance: Math.max(0, balance),
+              exists: true
+            };
+          } else {
+            // Virtual arrears logic
+            const isActive = s.enrollmentDate ? new Date(s.enrollmentDate) <= new Date(y, m - 1, 1) : true;
+            const isDue = (y < nowY) || (y === nowY && m <= nowM);
+            const fee = toNum(s.fee);
+            return {
+              id: `virtual-${y}-${m}`,
+              month: m,
+              year: y,
+              feeAmount: fee,
+              amountPaid: 0,
+              balance: (isActive && isDue) ? fee : 0,
+              exists: false
+            };
+          }
         });
 
-        // Filter by date range in JS
-        if (fromYear !== undefined && fromMonth !== undefined) {
-          studentPayments = studentPayments.filter(p => 
-            p.year > fromYear || (p.year === fromYear && p.month >= fromMonth)
-          );
-        }
-        if (toYear !== undefined && toMonth !== undefined) {
-          studentPayments = studentPayments.filter(p => 
-            p.year < toYear || (p.year === toYear && p.month <= toMonth)
-          );
-        }
-
         const totalPaid = studentPayments.reduce((sum, p) => sum + p.amountPaid, 0);
-        const totalDiscount = studentPayments.reduce((sum, p) => sum + p.discount, 0);
         const currentBalance = studentPayments.reduce((sum, p) => sum + p.balance, 0);
 
         return {
@@ -117,7 +130,6 @@ export async function GET(
           payments: studentPayments,
           summary: {
             totalPaid,
-            totalDiscount,
             currentBalance,
           }
         };

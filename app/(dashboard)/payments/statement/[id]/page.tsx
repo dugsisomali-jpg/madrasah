@@ -14,24 +14,14 @@ import {
 } from 'lucide-react';
 import Swal from 'sweetalert2';
 
-type ReceiptInfo = {
-  id: string;
-  amount: number;
-  date: string;
-  receiptNumber: string;
-};
-
 type PaymentInfo = {
   id: string;
   month: number;
   year: number;
   feeAmount: number;
-  totalDue: number;
-  discount: number;
   amountPaid: number;
   balance: number;
-  balanceDueDate: string | null;
-  receipts: ReceiptInfo[];
+  exists: boolean;
 };
 
 type StudentStatement = {
@@ -41,7 +31,6 @@ type StudentStatement = {
   payments: PaymentInfo[];
   summary: {
     totalPaid: number;
-    totalDiscount: number;
     currentBalance: number;
   };
 };
@@ -114,42 +103,17 @@ export default function StatementPage({ params }: { params: Promise<{ id: string
     return (
       <div className="flex h-screen flex-col items-center justify-center gap-4 bg-slate-50">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
-        <p className="font-semibold text-slate-500 animate-pulse uppercase tracking-[0.2em] text-xs font-mono">Generating Pivot Report...</p>
+        <p className="font-semibold text-slate-500 animate-pulse uppercase tracking-[0.2em] text-xs font-mono">Generating Statement...</p>
       </div>
     );
   }
 
   if (!statement) return <div className="p-10 text-center font-bold text-destructive">Failed to load statement details.</div>;
 
-  // Generate all month keys between 'from' and 'to'
-  const sortedMonthKeys: string[] = [];
-  if (from && to) {
-    let [currY, currM] = from.split('-').map(Number);
-    const [endY, endM] = to.split('-').map(Number);
-    
-    while (currY < endY || (currY === endY && currM <= endM)) {
-      sortedMonthKeys.push(`${currY}-${String(currM).padStart(2, '0')}`);
-      currM++;
-      if (currM > 12) {
-        currM = 1;
-        currY++;
-      }
-    }
-  } else {
-    // Fallback if no range: extract unique months from existing data
-    const allMonthsSet = new Set<string>();
-    statement.students.forEach(s => {
-      s.payments.forEach(p => {
-        allMonthsSet.add(`${p.year}-${String(p.month).padStart(2, '0')}`);
-      });
-    });
-    sortedMonthKeys.push(...Array.from(allMonthsSet).sort());
-  }
-
-  const monthLabels = sortedMonthKeys.map(k => {
-    const [y, m] = k.split('-');
-    return `${MONTHS[parseInt(m) - 1]} ${y.slice(-2)}`;
-  });
+  // month counts for formatting
+  const firstStudent = statement.students[0];
+  const monthKeys = firstStudent?.payments.map(p => `${p.year}-${String(p.month).padStart(2, '0')}`) || [];
+  const monthLabels = firstStudent?.payments.map(p => `${MONTHS[p.month - 1]} ${String(p.year).slice(-2)}`) || [];
 
   return (
     <div className="min-h-screen bg-slate-100/30 p-4 md:p-8 print:p-0 print:bg-white overflow-y-auto custom-scrollbar">
@@ -228,38 +192,44 @@ export default function StatementPage({ params }: { params: Promise<{ id: string
           </div>
 
           {/* Regular Full-Bordered Table */}
-          <div className="overflow-x-auto mb-12">
-            <table className="w-full text-left border-collapse border border-slate-900 min-w-[800px]">
+          <div className="overflow-x-auto mb-12 border border-slate-900">
+            <table className="w-full text-left border-collapse min-w-[1000px]">
               <thead>
                 <tr className="bg-slate-100">
-                  <th className="py-4 px-6 text-[11px] font-black text-slate-900 uppercase tracking-widest border border-slate-900">Student Name</th>
+                  <th className="py-4 px-4 text-[11px] font-black text-slate-900 uppercase tracking-widest border border-slate-900 sticky left-0 bg-slate-100 z-10 w-[200px]">Student Name</th>
                   {monthLabels.map((month, mIdx) => (
-                    <th key={mIdx} className="py-4 px-3 text-[10px] font-black text-slate-900 uppercase tracking-widest text-right border border-slate-900 whitespace-nowrap">
+                    <th key={mIdx} className="py-4 px-2 text-[10px] font-black text-slate-900 uppercase tracking-widest text-right border border-slate-900 whitespace-nowrap min-w-[80px]">
                       {month}
                     </th>
                   ))}
-                  <th className="py-4 px-6 text-[11px] font-black text-slate-900 uppercase tracking-widest text-right border border-slate-900 bg-slate-200">Total Arrears</th>
+                  <th className="py-4 px-4 text-[11px] font-black text-slate-900 uppercase tracking-widest text-right border border-slate-900 bg-slate-200 w-[120px]">Total Paid</th>
+                  <th className="py-4 px-4 text-[11px] font-black text-slate-900 uppercase tracking-widest text-right border border-slate-900 bg-rose-50 w-[120px]">Total Arrears</th>
                 </tr>
               </thead>
-              <tbody className="font-mono text-xs uppercase text-slate-900">
+              <tbody className="font-mono text-[11px] uppercase text-slate-900">
                 {statement.students.map((student, sIdx) => {
                   return (
                     <tr key={sIdx}>
-                      <td className="py-4 px-6 font-black border border-slate-900 bg-slate-50/30">
+                      <td className="py-4 px-4 font-black border border-slate-900 bg-slate-50/50 sticky left-0 z-10">
                         {student.studentName}
                       </td>
-                      {sortedMonthKeys.map((monthKey, mkIdx) => {
-                        const [y, m] = monthKey.split('-').map(Number);
-                        const payment = student.payments.find(p => p.year === y && p.month === m);
-                        const balance = payment ? payment.balance : 0;
+                      {student.payments.map((p, pIdx) => {
+                        const paid = p.amountPaid;
+                        const bal = p.balance;
                         
                         return (
-                          <td key={mkIdx} className="py-4 px-3 text-right border border-slate-900 font-bold">
-                            {balance > 1 ? balance.toLocaleString() : '—'}
+                          <td key={pIdx} className="py-4 px-2 text-right border border-slate-900 font-bold whitespace-nowrap">
+                            <div className="flex flex-col items-end">
+                               <span className={paid > 0 ? 'text-emerald-600' : 'text-slate-300'}>{paid > 0 ? paid.toLocaleString() : '—'}</span>
+                               {bal > 1 && <span className="text-[9px] text-rose-500 font-black mt-0.5">({bal.toLocaleString()})</span>}
+                            </div>
                           </td>
                         );
                       })}
-                      <td className="py-4 px-6 text-right font-black border border-slate-900 bg-slate-100 text-sm">
+                      <td className="py-4 px-4 text-right font-black border border-slate-900 bg-slate-50 text-emerald-700">
+                        {student.summary.totalPaid.toLocaleString()}
+                      </td>
+                      <td className="py-4 px-4 text-right font-black border border-slate-900 bg-rose-50/50 text-rose-700">
                         {student.summary.currentBalance.toLocaleString()}
                       </td>
                     </tr>
@@ -267,22 +237,25 @@ export default function StatementPage({ params }: { params: Promise<{ id: string
                 })}
               </tbody>
               <tfoot className="font-mono">
-                 <tr>
-                    <td className="py-5 px-6 text-[11px] font-black text-slate-900 uppercase tracking-widest italic border border-slate-900 bg-slate-100">Consolidated Summary</td>
-                    {sortedMonthKeys.map((monthKey, mkIdx) => {
-                        const [y, m] = monthKey.split('-').map(Number);
-                        const monthTotal = statement.students.reduce((sum, s) => {
-                            const p = s.payments.find(pm => pm.year === y && pm.month === m);
-                            return sum + (p ? p.balance : 0);
-                        }, 0);
+                 <tr className="bg-slate-100 italic">
+                    <td className="py-5 px-4 text-[11px] font-black text-slate-900 uppercase tracking-widest border border-slate-900 sticky left-0 bg-slate-100 z-10 font-bold">Consolidated</td>
+                    {monthKeys.map((_, mkIdx) => {
+                        const monthTotalPaid = statement.students.reduce((sum, s) => sum + s.payments[mkIdx].amountPaid, 0);
+                        const monthTotalBal = statement.students.reduce((sum, s) => sum + s.payments[mkIdx].balance, 0);
                         return (
-                            <td key={mkIdx} className="py-5 px-3 text-right text-[10px] font-black text-slate-900 border border-slate-900 bg-slate-50">
-                                {monthTotal > 1 ? monthTotal.toLocaleString() : '—'}
+                            <td key={mkIdx} className="py-5 px-2 text-right border border-slate-900">
+                                <div className="flex flex-col items-end">
+                                   <span className="text-[10px] font-black text-emerald-800">{monthTotalPaid > 0 ? monthTotalPaid.toLocaleString() : '—'}</span>
+                                   {monthTotalBal > 1 && <span className="text-[9px] text-rose-600 font-black">({monthTotalBal.toLocaleString()})</span>}
+                                </div>
                             </td>
                         );
                     })}
-                    <td className="py-5 px-6 text-right font-black text-slate-900 text-base tracking-tighter border border-slate-900 bg-slate-200">
-                        {statement.grandSummary.totalBalance.toLocaleString()} <span className="text-[10px] ml-1">KES</span>
+                    <td className="py-5 px-4 text-right font-black text-emerald-800 text-sm border border-slate-900 bg-emerald-50">
+                        {statement.grandSummary.totalPaid.toLocaleString()}
+                    </td>
+                    <td className="py-5 px-4 text-right font-black text-rose-900 text-sm border border-slate-900 bg-rose-100 font-bold">
+                        {statement.grandSummary.totalBalance.toLocaleString()} KES
                     </td>
                  </tr>
               </tfoot>
@@ -306,13 +279,12 @@ export default function StatementPage({ params }: { params: Promise<{ id: string
           body { background: white !important; }
           .min-h-screen { background: transparent !important; padding: 0 !important; }
           .mx-auto { max-width: none !important; margin: 0 !important; }
-          .shadow-2xl { shadow: none !important; }
-          /* Reset borders for print */
-          .border-slate-100 { border: none !important; }
+          .shadow-2xl { box-shadow: none !important; }
           .bg-slate-100\/30 { background: white !important; }
           @page { margin: 1cm; size: a4 landscape; }
-          table { border-collapse: collapse !important; width: 100% !important; }
-          th, td { border: 1px solid #000 !important; }
+          table { border-collapse: collapse !important; width: 100% !important; border: 2px solid #000 !important; }
+          th, td { border: 1px solid #000 !important; padding: 4px !important; }
+          .sticky { position: static !important; }
         }
       `}</style>
     </div>
