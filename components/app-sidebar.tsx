@@ -69,7 +69,9 @@ function NavLinks({
   return (
     <nav className="flex flex-col gap-1">
       {filteredItems.map(({ href, label, icon: Icon }) => {
-        const isActive = pathname === href || (href === '/receivables' && pathname.startsWith('/receivables/'));
+        const isActive = pathname === href || 
+          (href === '/receivables' && (pathname === '/receivables' || pathname.startsWith('/receivables/'))) ||
+          (href === '/payments' && (pathname === '/payments' || pathname.startsWith('/payments/') || pathname.startsWith('/receipts/')));
         return (
           <Link
             key={href}

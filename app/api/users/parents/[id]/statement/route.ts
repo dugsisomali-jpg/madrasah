@@ -16,6 +16,21 @@ export async function GET(
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { id: parentId } = await params;
+  const { searchParams } = new URL(req.url);
+  const from = searchParams.get('from'); // YYYY-MM
+  const to = searchParams.get('to');     // YYYY-MM
+
+  let fromYear: number | undefined, fromMonth: number | undefined;
+  let toYear: number | undefined, toMonth: number | undefined;
+
+  if (from) {
+    const [y, m] = from.split('-').map(Number);
+    if (!isNaN(y) && !isNaN(m)) { fromYear = y; fromMonth = m; }
+  }
+  if (to) {
+    const [y, m] = to.split('-').map(Number);
+    if (!isNaN(y) && !isNaN(m)) { toYear = y; toMonth = m; }
+  }
 
   try {
     const parent = await prisma.user.findUnique({
@@ -62,7 +77,7 @@ export async function GET(
       parentName: parent.name || parent.username,
       generatedAt: new Date().toISOString(),
       students: students.map(s => {
-        const studentPayments = s.Payment.map(p => {
+        let studentPayments = s.Payment.map(p => {
           const balance = toNum(p.totalDue) - toNum(p.discount) - toNum(p.amountPaid);
           return {
             id: p.id,
@@ -79,16 +94,21 @@ export async function GET(
           };
         });
 
-        const totalFee = studentPayments.reduce((sum, p) => sum + p.feeAmount, 0); // Base fees only for summary
+        // Filter by date range in JS
+        if (fromYear !== undefined && fromMonth !== undefined) {
+          studentPayments = studentPayments.filter(p => 
+            p.year > fromYear || (p.year === fromYear && p.month >= fromMonth)
+          );
+        }
+        if (toYear !== undefined && toMonth !== undefined) {
+          studentPayments = studentPayments.filter(p => 
+            p.year < toYear || (p.year === toYear && p.month <= toMonth)
+          );
+        }
+
         const totalPaid = studentPayments.reduce((sum, p) => sum + p.amountPaid, 0);
         const totalDiscount = studentPayments.reduce((sum, p) => sum + p.discount, 0);
-        // Current balance is the balance of the latest record (which includes carry over)
-        // OR we can sum up all unpaid segments.
-        // Actually, totalDue already includes balanceCarriedOver.
-        // So the "Grand Total Due" is NOT just sum of totalDue.
-        // It's the sum of (feeAmount - discount) across all months.
-        
-        const currentBalance = studentPayments.length > 0 ? studentPayments[0].balance : 0;
+        const currentBalance = studentPayments.reduce((sum, p) => sum + p.balance, 0);
 
         return {
           studentId: s.id,
@@ -103,15 +123,13 @@ export async function GET(
         };
       }),
       grandSummary: {
-        totalPaid: students.reduce((sum, s) => {
-          return sum + s.Payment.reduce((ps, p) => ps + toNum(p.amountPaid), 0);
-        }, 0),
-        totalBalance: students.reduce((sum, s) => {
-          const latest = s.Payment[0];
-          return sum + (latest ? Math.max(0, toNum(latest.totalDue) - toNum(latest.discount) - toNum(latest.amountPaid)) : 0);
-        }, 0),
+        totalPaid: 0,
+        totalBalance: 0,
       }
     };
+
+    statement.grandSummary.totalPaid = statement.students.reduce((sum, s) => sum + s.summary.totalPaid, 0);
+    statement.grandSummary.totalBalance = statement.students.reduce((sum, s) => sum + s.summary.currentBalance, 0);
 
     return NextResponse.json(statement);
   } catch (error) {

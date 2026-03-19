@@ -97,6 +97,10 @@ export function PaymentsContent() {
   const [dueDateModalValue, setDueDateModalValue] = useState('');
   const [dueDateModalSaving, setDueDateModalSaving] = useState(false);
   const [printBatchId, setPrintBatchId] = useState<string | null>(null);
+  const [statementModalOpen, setStatementModalOpen] = useState(false);
+  const [statementParentId, setStatementParentId] = useState('');
+  const [statementFrom, setStatementFrom] = useState('');
+  const [statementTo, setStatementTo] = useState('');
 
   useEffect(() => {
     setLoading(true);
@@ -534,22 +538,14 @@ export function PaymentsContent() {
               <UsersRound className="h-4 w-4" />
               Pay by parent
             </button>
-            <Link
-              href={parentId ? `/parents/${parentId}/statement` : '#'}
-              onClick={(e) => {
-                if (!parentId) {
-                  e.preventDefault();
-                  Swal.fire({
-                    icon: 'info',
-                    text: 'Please select a parent from the "Pay by parent" modal or search to view their statement.',
-                  });
-                }
-              }}
+            <button
+              type="button"
+              onClick={() => setStatementModalOpen(true)}
               className={btnSecondary}
             >
               <FileText className="h-4 w-4" />
               Statement
-            </Link>
+            </button>
             <button
               type="button"
               onClick={() => setRangeModalOpen(true)}
@@ -912,7 +908,7 @@ export function PaymentsContent() {
                     <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Parent</label>
                     {parentId && (
                       <Link
-                        href={`/parents/${parentId}/statement`}
+                        href={`/payments/statement/${parentId}`}
                         target="_blank"
                         className="text-[10px] font-black text-primary hover:underline uppercase tracking-widest flex items-center gap-1"
                       >
@@ -1369,6 +1365,76 @@ export function PaymentsContent() {
           <div className="fixed inset-0 z-[60] bg-slate-950/40 backdrop-blur-sm" onClick={() => setPrintBatchId(null)} aria-hidden="true" />
           <div className="fixed left-1/2 top-1/2 z-[70] w-full max-w-4xl -translate-x-1/2 -translate-y-1/2 p-4">
             <ParentReceiptPrintable batchId={printBatchId} onClose={() => setPrintBatchId(null)} />
+          </div>
+        </>
+      )}
+
+      {statementModalOpen && (
+        <>
+          <div className="fixed inset-0 z-50 bg-black/60" onClick={() => setStatementModalOpen(false)} aria-hidden="true" />
+          <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-2xl border bg-card p-0 shadow-2xl overflow-hidden">
+            <div className="bg-slate-900 px-6 py-4 flex items-center gap-3">
+              <FileText className="h-5 w-5 text-white/70" />
+              <h2 className="text-lg font-bold text-white tracking-tight">Generate Statement</h2>
+            </div>
+            <div className="p-6 space-y-5">
+              <div>
+                <label className="mb-2 block text-xs font-bold uppercase tracking-widest text-muted-foreground/80">Select Parent</label>
+                <SearchableSelect
+                  options={parents.map((p) => ({
+                    value: p.id,
+                    label: p.name || p.username || p.id,
+                  }))}
+                  value={statementParentId}
+                  onChange={setStatementParentId}
+                  placeholder="Type to search parent..."
+                  className="w-full"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="mb-2 block text-xs font-bold uppercase tracking-widest text-muted-foreground/80">From</label>
+                  <input
+                    type="month"
+                    value={statementFrom}
+                    onChange={(e) => setStatementFrom(e.target.value)}
+                    className={inputCls}
+                  />
+                </div>
+                <div>
+                  <label className="mb-2 block text-xs font-bold uppercase tracking-widest text-muted-foreground/80">To</label>
+                  <input
+                    type="month"
+                    value={statementTo}
+                    onChange={(e) => setStatementTo(e.target.value)}
+                    className={inputCls}
+                  />
+                </div>
+              </div>
+              <div className="pt-4 flex gap-3">
+                <button 
+                  type="button" 
+                  onClick={() => setStatementModalOpen(false)} 
+                  className="flex-1 rounded-xl border border-input py-2.5 text-sm font-semibold hover:bg-muted transition-colors"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="button" 
+                  disabled={!statementParentId}
+                  onClick={() => {
+                    const qs = new URLSearchParams();
+                    if (statementFrom) qs.set('from', statementFrom);
+                    if (statementTo) qs.set('to', statementTo);
+                    window.open(`/payments/statement/${statementParentId}?${qs.toString()}`, '_blank');
+                    setStatementModalOpen(false);
+                  }}
+                  className="flex-[2] rounded-xl bg-slate-900 py-2.5 text-sm font-bold text-white shadow-lg hover:bg-slate-800 disabled:opacity-50 transition-all active:scale-95"
+                >
+                  Generate Report
+                </button>
+              </div>
+            </div>
           </div>
         </>
       )}
