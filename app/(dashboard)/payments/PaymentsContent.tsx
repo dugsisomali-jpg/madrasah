@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Swal from 'sweetalert2';
-import { Plus, Receipt, ChevronDown, Banknote, ChevronUp, ChevronLeft, ChevronRight, Users, User, ExternalLink, CalendarRange, Loader2, UsersRound, Calendar } from 'lucide-react';
+import { Plus, Receipt, ChevronDown, Banknote, ChevronUp, ChevronLeft, ChevronRight, Users, User, ExternalLink, CalendarRange, Loader2, UsersRound, Calendar, FileText } from 'lucide-react';
 import { SearchableSelect } from '@/components/SearchableSelect';
 import { ParentReceiptPrintable } from '@/components/ParentReceiptPrintable';
 import {
@@ -347,13 +347,13 @@ export function PaymentsContent() {
                 ? `Created ${data.created} receipt(s) for ${data.months} month(s) (${data.skipped} already paid, skipped).`
                 : `Created ${data.created} receipt(s) for ${data.months} month(s) – ${rangeAmount} KES.`)
               : `Created ${data.created} receipt(s) for ${data.studentCount} children over ${rangeMonthsCount} months – ${rangeAmount} KES.`,
-            showCancelButton: data.receiptBatchId ? true : false,
+            showDenyButton: data.receiptBatchId ? true : false,
             confirmButtonText: 'Great!',
-            cancelButtonText: 'Print Receipt',
-            cancelButtonColor: '#0f172a',
+            denyButtonText: 'Print Receipt',
+            denyButtonColor: '#0f172a',
           }).then((result) => {
-            if (result.dismiss === Swal.DismissReason.cancel && data.receiptBatchId) {
-              setPrintBatchId(data.receiptBatchId);
+            if (result.isDenied && data.receiptBatchId) {
+              window.open(`/receipts/${data.receiptBatchId}`, '_blank');
             }
           });
         } else {
@@ -484,13 +484,13 @@ export function PaymentsContent() {
             icon: 'success',
             title: 'Receipts added',
             text: `Created ${data.created} receipt(s) for ${data.totalAmount.toLocaleString()} KES – ${MONTHS[data.month - 1]} ${data.year}.`,
-            showCancelButton: data.receiptBatchId ? true : false,
+            showDenyButton: data.receiptBatchId ? true : false,
             confirmButtonText: 'Great!',
-            cancelButtonText: 'Print Receipt',
-            cancelButtonColor: '#0f172a',
+            denyButtonText: 'Print Receipt',
+            denyButtonColor: '#0f172a',
           }).then((result) => {
-            if (result.dismiss === Swal.DismissReason.cancel && data.receiptBatchId) {
-              setPrintBatchId(data.receiptBatchId);
+            if (result.isDenied && data.receiptBatchId) {
+              window.open(`/receipts/${data.receiptBatchId}`, '_blank');
             }
           });
         } else {
@@ -534,6 +534,22 @@ export function PaymentsContent() {
               <UsersRound className="h-4 w-4" />
               Pay by parent
             </button>
+            <Link
+              href={parentId ? `/parents/${parentId}/statement` : '#'}
+              onClick={(e) => {
+                if (!parentId) {
+                  e.preventDefault();
+                  Swal.fire({
+                    icon: 'info',
+                    text: 'Please select a parent from the "Pay by parent" modal or search to view their statement.',
+                  });
+                }
+              }}
+              className={btnSecondary}
+            >
+              <FileText className="h-4 w-4" />
+              Statement
+            </Link>
             <button
               type="button"
               onClick={() => setRangeModalOpen(true)}
@@ -892,7 +908,19 @@ export function PaymentsContent() {
             <form onSubmit={handleParentPaySubmit} className="mt-4 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="mb-1.5 block text-sm font-medium">Parent</label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Parent</label>
+                    {parentId && (
+                      <Link
+                        href={`/parents/${parentId}/statement`}
+                        target="_blank"
+                        className="text-[10px] font-black text-primary hover:underline uppercase tracking-widest flex items-center gap-1"
+                      >
+                        <FileText className="h-3 w-3" />
+                        Full Statement
+                      </Link>
+                    )}
+                  </div>
                   <SearchableSelect
                     options={parents.map((p) => ({
                       value: p.id,
