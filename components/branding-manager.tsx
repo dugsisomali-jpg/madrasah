@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 
 export function BrandingManager() {
-  useEffect(() => {
+  const updateBranding = useCallback(() => {
     fetch('/api/settings')
       .then(r => r.json())
       .then(settings => {
@@ -28,6 +28,14 @@ export function BrandingManager() {
       })
       .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    updateBranding();
+    
+    // Listen for branding updates
+    window.addEventListener('branding-update', updateBranding);
+    return () => window.removeEventListener('branding-update', updateBranding);
+  }, [updateBranding]);
 
   return null;
 }

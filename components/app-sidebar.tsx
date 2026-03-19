@@ -113,14 +113,20 @@ export function AppSidebar({
   const [logo, setLogo] = useState('/logo.png');
 
   useEffect(() => {
-    fetch('/api/settings')
-      .then(r => r.json())
-      .then(settings => {
-        if (Array.isArray(settings)) {
-          const s = settings.find(s => s.key === 'logo');
-          if (s?.value) setLogo(s.value);
-        }
-      }).catch(() => {});
+    const fetchLogo = () => {
+      fetch('/api/settings')
+        .then(r => r.json())
+        .then(settings => {
+          if (Array.isArray(settings)) {
+            const s = settings.find(s => s.key === 'logo');
+            if (s?.value) setLogo(s.value);
+          }
+        }).catch(() => {});
+    };
+
+    fetchLogo();
+    window.addEventListener('branding-update', fetchLogo);
+    return () => window.removeEventListener('branding-update', fetchLogo);
   }, []);
 
   return (

@@ -26,7 +26,15 @@ export default function SettingsPage() {
   useEffect(() => {
     fetch('/api/settings')
       .then(r => r.json())
-      .then(data => setSettings(data))
+      .then(data => {
+        if (Array.isArray(data)) {
+          const map: SettingsMap = {};
+          data.forEach(s => map[s.key] = s.value);
+          setSettings(map);
+        } else {
+          setSettings(data);
+        }
+      })
       .catch(err => console.error(err))
       .finally(() => setLoading(false));
   }, []);
@@ -44,6 +52,13 @@ export default function SettingsPage() {
         body: JSON.stringify({ key, value }),
       });
       if (!res.ok) throw new Error('Failed to save');
+      
+      // Update local state for immediate preview
+      setSettings(prev => ({ ...prev, [key]: value }));
+      
+      // Propagate change system-wide
+      window.dispatchEvent(new CustomEvent('branding-update'));
+
       Swal.fire({
         icon: 'success',
         title: 'Setting Updated',
@@ -95,8 +110,9 @@ export default function SettingsPage() {
                  <div className="flex gap-2">
                    <input 
                       type="text" 
-                      value={settings.madrasah_name || ''} 
-                      onChange={(e) => handleChange('madrasah_name', e.target.value)}
+                      value={settings.name || ''} 
+                      onChange={(e) => handleChange('name', e.target.value)}
+                      onBlur={(e) => handleSave('name', e.target.value)}
                       className="flex-1 rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary transition-all outline-none"
                       placeholder="e.g. Madrasah Academic"
                    />
@@ -186,8 +202,8 @@ export default function SettingsPage() {
                 <label className="text-xs font-black uppercase tracking-widest text-slate-400">Institutional Logo</label>
                 <ImageUpload 
                   label="Select Logo"
-                  currentValue={settings.madrasah_logo}
-                  onSuccess={(url) => handleSave('madrasah_logo', url)}
+                  currentValue={settings.logo}
+                  onSuccess={(url) => handleSave('logo', url)}
                   folder="/branding/logo"
                 />
                 <p className="text-[10px] text-slate-400 italic">Recommended: 512x512px PNG/SVG</p>
@@ -200,8 +216,8 @@ export default function SettingsPage() {
                    <div className="flex-1">
                       <ImageUpload 
                         label="Select Favicon"
-                        currentValue={settings.madrasah_favicon}
-                        onSuccess={(url) => handleSave('madrasah_favicon', url)}
+                        currentValue={settings.favicon}
+                        onSuccess={(url) => handleSave('favicon', url)}
                         folder="/branding/favicon"
                       />
                    </div>
