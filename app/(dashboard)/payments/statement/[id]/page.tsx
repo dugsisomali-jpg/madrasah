@@ -121,15 +121,31 @@ export default function StatementPage({ params }: { params: Promise<{ id: string
 
   if (!statement) return <div className="p-10 text-center font-bold text-destructive">Failed to load statement details.</div>;
 
-  // Extract all unique months from all students to build columns
-  const allMonthsSet = new Set<string>();
-  statement.students.forEach(s => {
-    s.payments.forEach(p => {
-      allMonthsSet.add(`${p.year}-${String(p.month).padStart(2, '0')}`);
+  // Generate all month keys between 'from' and 'to'
+  const sortedMonthKeys: string[] = [];
+  if (from && to) {
+    let [currY, currM] = from.split('-').map(Number);
+    const [endY, endM] = to.split('-').map(Number);
+    
+    while (currY < endY || (currY === endY && currM <= endM)) {
+      sortedMonthKeys.push(`${currY}-${String(currM).padStart(2, '0')}`);
+      currM++;
+      if (currM > 12) {
+        currM = 1;
+        currY++;
+      }
+    }
+  } else {
+    // Fallback if no range: extract unique months from existing data
+    const allMonthsSet = new Set<string>();
+    statement.students.forEach(s => {
+      s.payments.forEach(p => {
+        allMonthsSet.add(`${p.year}-${String(p.month).padStart(2, '0')}`);
+      });
     });
-  });
+    sortedMonthKeys.push(...Array.from(allMonthsSet).sort());
+  }
 
-  const sortedMonthKeys = Array.from(allMonthsSet).sort();
   const monthLabels = sortedMonthKeys.map(k => {
     const [y, m] = k.split('-');
     return `${MONTHS[parseInt(m) - 1]} ${y.slice(-2)}`;
@@ -138,7 +154,7 @@ export default function StatementPage({ params }: { params: Promise<{ id: string
   return (
     <div className="min-h-screen bg-slate-100/30 p-4 md:p-8 print:p-0 print:bg-white overflow-y-auto custom-scrollbar">
       {/* Action Bar */}
-      <div className="mx-auto max-w-6xl mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 print:hidden">
+      <div className="mx-auto max-w-7xl mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 print:hidden">
         <button
           onClick={() => router.back()}
           className="inline-flex items-center gap-2 text-sm font-black text-slate-400 hover:text-slate-900 transition-colors uppercase tracking-widest"
@@ -166,10 +182,10 @@ export default function StatementPage({ params }: { params: Promise<{ id: string
       </div>
 
       {/* Statement Frame */}
-      <div className="mx-auto max-w-6xl print:max-w-none print:shadow-none shadow-2xl shadow-slate-200/40 rounded-[3rem] border border-slate-100 bg-white p-2 print:p-0 print:border-none overflow-hidden">
+      <div className="mx-auto max-w-7xl print:max-w-none print:shadow-none shadow-2xl shadow-slate-200/40 border border-slate-100 bg-white p-2 print:p-0 print:border-none">
         <div 
           ref={printRef}
-          className="bg-white p-10 md:p-14 print:p-8 text-slate-900 rounded-[2.8rem] print:rounded-none"
+          className="bg-white p-10 md:p-14 print:p-8 text-slate-900"
           style={{ fontFamily: "'Inter', sans-serif" }}
         >
           {/* Header */}
@@ -180,8 +196,8 @@ export default function StatementPage({ params }: { params: Promise<{ id: string
                   <FileText className="h-6 w-6" />
                 </div>
                 <div>
-                  <h1 className="text-3xl font-black tracking-tighter text-slate-900 leading-none">Arrears Statement</h1>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mt-1.5">Consolidated Financial Ledger</p>
+                  <h1 className="text-3xl font-black tracking-tighter text-slate-900 leading-none uppercase">Account Statement</h1>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mt-1.5">Consolidated Student Ledger</p>
                 </div>
               </div>
               <div className="flex items-center gap-3 sm:ml-16">
@@ -195,10 +211,10 @@ export default function StatementPage({ params }: { params: Promise<{ id: string
             </div>
             <div className="receipt-meta text-left sm:text-right">
               <div className="mb-4">
-                <p className="text-[9px] font-black text-slate-300 uppercase mb-1 tracking-[0.2em]">Statement For</p>
+                <p className="text-[9px] font-black text-slate-300 uppercase mb-1 tracking-[0.2em]">Parent Name</p>
                 <div className="flex items-center gap-2 sm:justify-end">
                    <User className="h-3.5 w-3.5 text-slate-400" />
-                   <p className="text-lg font-black text-slate-900 uppercase tracking-tight">{statement.parentName}</p>
+                   <p className="text-xl font-black text-slate-900 uppercase tracking-tight">{statement.parentName}</p>
                 </div>
               </div>
               <div>
@@ -211,25 +227,25 @@ export default function StatementPage({ params }: { params: Promise<{ id: string
             </div>
           </div>
 
-          {/* Pivot Table */}
-          <div className="overflow-x-auto rounded-[2rem] border border-slate-100 shadow-sm bg-white overflow-hidden mb-12">
-            <table className="w-full text-left border-collapse min-w-[800px]">
+          {/* Regular Full-Bordered Table */}
+          <div className="overflow-x-auto mb-12">
+            <table className="w-full text-left border-collapse border border-slate-900 min-w-[800px]">
               <thead>
-                <tr className="bg-slate-900">
-                  <th className="py-5 px-8 text-[11px] font-black text-white/50 uppercase tracking-widest border-r border-white/10">Student Name</th>
+                <tr className="bg-slate-100">
+                  <th className="py-4 px-6 text-[11px] font-black text-slate-900 uppercase tracking-widest border border-slate-900">Student Name</th>
                   {monthLabels.map((month, mIdx) => (
-                    <th key={mIdx} className="py-5 px-4 text-[10px] font-black text-white/70 uppercase tracking-widest text-right border-r border-white/10 last:border-none">
+                    <th key={mIdx} className="py-4 px-3 text-[10px] font-black text-slate-900 uppercase tracking-widest text-right border border-slate-900 whitespace-nowrap">
                       {month}
                     </th>
                   ))}
-                  <th className="py-5 px-8 text-[11px] font-black text-white uppercase tracking-widest text-right bg-slate-800">Total Arrears</th>
+                  <th className="py-4 px-6 text-[11px] font-black text-slate-900 uppercase tracking-widest text-right border border-slate-900 bg-slate-200">Total Arrears</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-50 font-mono text-xs uppercase">
+              <tbody className="font-mono text-xs uppercase text-slate-900">
                 {statement.students.map((student, sIdx) => {
                   return (
-                    <tr key={sIdx} className="hover:bg-slate-50/50 transition-colors group">
-                      <td className="py-5 px-8 font-black text-slate-900 border-r border-slate-50 bg-slate-50/20">
+                    <tr key={sIdx}>
+                      <td className="py-4 px-6 font-black border border-slate-900 bg-slate-50/30">
                         {student.studentName}
                       </td>
                       {sortedMonthKeys.map((monthKey, mkIdx) => {
@@ -238,21 +254,21 @@ export default function StatementPage({ params }: { params: Promise<{ id: string
                         const balance = payment ? payment.balance : 0;
                         
                         return (
-                          <td key={mkIdx} className={`py-5 px-4 text-right border-r border-slate-50 last:border-none font-bold ${balance > 1 ? 'text-rose-600' : 'text-slate-200'}`}>
+                          <td key={mkIdx} className="py-4 px-3 text-right border border-slate-900 font-bold">
                             {balance > 1 ? balance.toLocaleString() : '—'}
                           </td>
                         );
                       })}
-                      <td className="py-5 px-8 text-right font-black bg-slate-50/30 text-rose-700 text-sm">
+                      <td className="py-4 px-6 text-right font-black border border-slate-900 bg-slate-100 text-sm">
                         {student.summary.currentBalance.toLocaleString()}
                       </td>
                     </tr>
                   );
                 })}
               </tbody>
-              <tfoot>
-                 <tr className="bg-slate-900">
-                    <td className="py-5 px-8 text-[11px] font-black text-white/50 uppercase tracking-widest italic border-r border-white/10">Consolidated Summary</td>
+              <tfoot className="font-mono">
+                 <tr>
+                    <td className="py-5 px-6 text-[11px] font-black text-slate-900 uppercase tracking-widest italic border border-slate-900 bg-slate-100">Consolidated Summary</td>
                     {sortedMonthKeys.map((monthKey, mkIdx) => {
                         const [y, m] = monthKey.split('-').map(Number);
                         const monthTotal = statement.students.reduce((sum, s) => {
@@ -260,12 +276,12 @@ export default function StatementPage({ params }: { params: Promise<{ id: string
                             return sum + (p ? p.balance : 0);
                         }, 0);
                         return (
-                            <td key={mkIdx} className="py-5 px-4 text-right text-[10px] font-black text-white border-r border-white/10 last:border-none">
+                            <td key={mkIdx} className="py-5 px-3 text-right text-[10px] font-black text-slate-900 border border-slate-900 bg-slate-50">
                                 {monthTotal > 1 ? monthTotal.toLocaleString() : '—'}
                             </td>
                         );
                     })}
-                    <td className="py-5 px-8 text-right font-black text-white text-base tracking-tighter bg-rose-600 shadow-2xl">
+                    <td className="py-5 px-6 text-right font-black text-slate-900 text-base tracking-tighter border border-slate-900 bg-slate-200">
                         {statement.grandSummary.totalBalance.toLocaleString()} <span className="text-[10px] ml-1">KES</span>
                     </td>
                  </tr>
@@ -276,8 +292,8 @@ export default function StatementPage({ params }: { params: Promise<{ id: string
           {/* Institutional Stamp Area */}
           <div className="mt-20 flex justify-end">
              <div className="flex flex-col items-center">
-                <div className="h-32 w-32 border-4 border-dashed border-slate-100 rounded-full flex items-center justify-center mb-4">
-                    <p className="text-[10px] font-black text-slate-200 uppercase tracking-widest text-center px-4 leading-relaxed">Official Institution Stamp Required</p>
+                <div className="h-32 w-32 border-4 border-dashed border-slate-200 rounded-full flex items-center justify-center mb-4">
+                    <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest text-center px-4 leading-relaxed">Official Institution Stamp Required</p>
                 </div>
                 <div className="text-[11px] font-black text-slate-400 uppercase tracking-[0.4em] italic leading-none">Institutional Verification</div>
              </div>
@@ -291,12 +307,12 @@ export default function StatementPage({ params }: { params: Promise<{ id: string
           .min-h-screen { background: transparent !important; padding: 0 !important; }
           .mx-auto { max-width: none !important; margin: 0 !important; }
           .shadow-2xl { shadow: none !important; }
-          .rounded-\[3rem\] { border-radius: 0 !important; border: none !important; }
-          .p-2 { padding: 0 !important; }
-          .print\:p-8 { padding: 2rem !important; }
-          .rounded-\[2\.8rem\] { border-radius: 0 !important; }
-          @page { margin: 1cm; size: a4; landscape; }
-          .student-section { page-break-inside: avoid; }
+          /* Reset borders for print */
+          .border-slate-100 { border: none !important; }
+          .bg-slate-100\/30 { background: white !important; }
+          @page { margin: 1cm; size: a4 landscape; }
+          table { border-collapse: collapse !important; width: 100% !important; }
+          th, td { border: 1px solid #000 !important; }
         }
       `}</style>
     </div>
