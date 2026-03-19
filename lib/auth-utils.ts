@@ -13,19 +13,24 @@ export async function requireAuth() {
 
 /** Get all permissions for a user (via roles or directPermissions). */
 export async function getUserPermissions(userId: string): Promise<string[]> {
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    include: {
-      roles: { include: { permissions: { select: { name: true } } } },
-      directPermissions: { select: { name: true } },
-    },
-  });
-  if (!user) return [];
-  const fromRoles = user.roles.flatMap((r) => r.permissions.map((p) => p.name));
-  const fromDirect = user.directPermissions.map((p) => p.name);
-  return [...new Set([...fromRoles, ...fromDirect])]
-    .filter(Boolean)
-    .map((n) => n.toLowerCase());
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        roles: { include: { permissions: { select: { name: true } } } },
+        directPermissions: { select: { name: true } },
+      },
+    });
+    if (!user) return [];
+    const fromRoles = user.roles.flatMap((r) => r.permissions.map((p) => p.name));
+    const fromDirect = user.directPermissions.map((p) => p.name);
+    return [...new Set([...fromRoles, ...fromDirect])]
+      .filter(Boolean)
+      .map((n) => n.toLowerCase());
+  } catch (err) {
+    console.error('[getUserPermissions] error:', err);
+    return [];
+  }
 }
 
 /** True if user has the given permission (via roles or directPermissions). */
@@ -64,11 +69,16 @@ export async function shouldFilterMemorizationByTeacher(userId: string): Promise
 
 /** True if user has the parent role. Parents see only their own children's data. */
 export async function isParentRole(userId: string): Promise<boolean> {
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    include: { roles: { select: { name: true } } },
-  });
-  if (!user) return false;
-  const roleNames = user.roles.map((r) => (r.name || '').toLowerCase());
-  return roleNames.includes('parent');
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: { roles: { select: { name: true } } },
+    });
+    if (!user) return false;
+    const roleNames = user.roles.map((r) => (r.name || '').toLowerCase());
+    return roleNames.includes('parent');
+  } catch (err) {
+    console.error('[isParentRole] error:', err);
+    return false;
+  }
 }

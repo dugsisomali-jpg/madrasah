@@ -32,7 +32,7 @@ export const authOptions: NextAuthOptions = {
         if (!credentials?.username || !credentials?.password) return null;
 
         try {
-          const user = await (prisma as any).user.findUnique({
+          const user = await prisma.user.findUnique({
             where: { username: credentials.username.trim() },
           });
 
@@ -44,7 +44,7 @@ export const authOptions: NextAuthOptions = {
           return {
             id: user.id,
             username: user.username,
-            name: user.name,
+            name: user.name ?? undefined,
           };
         } catch (err) {
           console.error('Auth authorize error:', err);
@@ -72,5 +72,4 @@ export const authOptions: NextAuthOptions = {
   },
   session: { strategy: 'jwt', maxAge: 30 * 24 * 60 * 60 },
   pages: { signIn: '/login' },
-  trustHost: true,
 } as NextAuthOptions;
