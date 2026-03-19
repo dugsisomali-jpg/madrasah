@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
 import { Plus, Receipt, ChevronDown, Banknote, ChevronUp, ChevronLeft, ChevronRight, Users, User, ExternalLink, CalendarRange, Loader2, UsersRound, Calendar, FileText } from 'lucide-react';
 import { SearchableSelect } from '@/components/SearchableSelect';
@@ -47,6 +48,7 @@ function n(v: number | string | unknown): number {
 }
 
 export function PaymentsContent() {
+  const router = useRouter();
   const [payments, setPayments] = useState<Payment[]>([]);
   const [students, setStudents] = useState<{ id: string; name: string; fee?: number | string | null }[]>([]);
   const [loading, setLoading] = useState(true);
@@ -357,7 +359,7 @@ export function PaymentsContent() {
             denyButtonColor: '#0f172a',
           }).then((result) => {
             if (result.isDenied && data.receiptBatchId) {
-              window.open(`/receipts/${data.receiptBatchId}`, '_blank');
+              router.push(`/receipts/${data.receiptBatchId}`);
             }
           });
         } else {
@@ -494,7 +496,7 @@ export function PaymentsContent() {
             denyButtonColor: '#0f172a',
           }).then((result) => {
             if (result.isDenied && data.receiptBatchId) {
-              window.open(`/receipts/${data.receiptBatchId}`, '_blank');
+              router.push(`/receipts/${data.receiptBatchId}`);
             }
           });
         } else {
@@ -909,7 +911,6 @@ export function PaymentsContent() {
                     {parentId && (
                       <Link
                         href={`/payments/statement/${parentId}`}
-                        target="_blank"
                         className="text-[10px] font-black text-primary hover:underline uppercase tracking-widest flex items-center gap-1"
                       >
                         <FileText className="h-3 w-3" />
@@ -1426,7 +1427,7 @@ export function PaymentsContent() {
                     const qs = new URLSearchParams();
                     if (statementFrom) qs.set('from', statementFrom);
                     if (statementTo) qs.set('to', statementTo);
-                    window.open(`/payments/statement/${statementParentId}?${qs.toString()}`, '_blank');
+                    router.push(`/payments/statement/${statementParentId}?${qs.toString()}`);
                     setStatementModalOpen(false);
                   }}
                   className="flex-[2] rounded-xl bg-slate-900 py-2.5 text-sm font-bold text-white shadow-lg hover:bg-slate-800 disabled:opacity-50 transition-all active:scale-95"
