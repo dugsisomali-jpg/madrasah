@@ -23,13 +23,13 @@ export async function GET(req: NextRequest) {
       where: from || to ? { date: dateQuery } : {},
       select: { amount: true, date: true }
     });
-    const totalIncome = incomeData.reduce((sum, r) => sum + Number(r.amount), 0);
+    const totalIncome = incomeData.reduce((sum: number, r: any) => sum + Number(r.amount), 0);
 
     // 2. Fetch Expenses
     const expenseData = await prisma.expense.findMany({
       where: from || to ? { date: dateQuery } : {},
     });
-    const totalExpenses = expenseData.reduce((sum, e) => sum + Number(e.amount), 0);
+    const totalExpenses = expenseData.reduce((sum: number, e: any) => sum + Number(e.amount), 0);
 
     // 3. Fetch Payroll (Confirmed Payslips)
     const payslipData = await prisma.payslip.findMany({
@@ -38,14 +38,51 @@ export async function GET(req: NextRequest) {
         paymentDate: from || to ? dateQuery : undefined,
       },
     });
-    const totalPayroll = payslipData.reduce((sum, p) => sum + Number(p.netSalary), 0);
+    const totalPayroll = payslipData.reduce((sum: number, p: any) => sum + Number(p.netSalary), 0);
 
-    // Category Breakdown for Expenses
+    // 4. Category Breakdown for Expenses
     const expenseCategories: Record<string, number> = {};
-    expenseData.forEach(e => {
+    expenseData.forEach((e: any) => {
       expenseCategories[e.category] = (expenseCategories[e.category] || 0) + Number(e.amount);
     });
     expenseCategories['Payroll'] = totalPayroll;
+
+    // 5. Fetch Detailed Transactions (Recent 50)
+    const recentReceipts = await prisma.receipt.findMany({
+      where: from || to ? { date: dateQuery } : {},
+      take: 25,
+      orderBy: { date: 'desc' },
+      include: { 
+        Payment: { 
+          include: { Student: { select: { name: true } } } 
+        } 
+      }
+    });
+
+    const recentExpenses = await prisma.expense.findMany({
+      where: from || to ? { date: dateQuery } : {},
+      take: 25,
+      orderBy: { date: 'desc' },
+    });
+
+    const transactions = [
+      ...recentReceipts.map((r: any) => ({
+        id: r.id,
+        date: r.date,
+        description: `Fee Payment - ${r.Payment.Student.name}`,
+        category: 'Student Fees',
+        type: 'INCOME',
+        amount: Number(r.amount)
+      })),
+      ...recentExpenses.map((e: any) => ({
+        id: e.id,
+        date: e.date,
+        description: e.description,
+        category: e.category,
+        type: 'EXPENSE',
+        amount: Number(e.amount)
+      }))
+    ].sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     return NextResponse.json({
       summary: {
@@ -55,9 +92,9 @@ export async function GET(req: NextRequest) {
       },
       breakdown: {
         expenses: expenseCategories,
-        // For income, we currently only have One 'Student Fees' category implicitly
         income: { 'Student Fees': totalIncome }
-      }
+      },
+      transactions: transactions.slice(0, 50)
     });
   } catch (error) {
     console.error('[FINANCE_REPORT_GET]', error);

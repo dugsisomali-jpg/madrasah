@@ -31,21 +31,21 @@ export function ParentLayout({
   }
 
   return (
-    <div className="min-h-screen bg-slate-50/50 italic-none">
-      <header className="sticky top-0 z-40 flex h-20 items-center justify-between bg-white/70 backdrop-blur-2xl border-b border-slate-100 px-6 sm:px-10">
+    <div className="min-h-screen bg-slate-50 italic-none">
+      <header className="sticky top-0 z-40 flex h-16 items-center justify-between bg-white border-b border-slate-100 px-6 sm:px-10 shadow-sm">
         <Link href="/parent" className="flex items-center gap-4 group">
-          <div className="size-12 rounded-2xl bg-indigo-600 flex items-center justify-center shadow-xl shadow-indigo-600/20 transition-transform group-hover:scale-105">
-            <Image src="/logo.png" alt="" width={32} height={32} className="object-contain" />
+          <div className="size-10 rounded-xl bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-600/20 transition-transform group-hover:scale-105">
+            <Image src="/logo.png" alt="" width={28} height={28} className="object-contain" />
           </div>
           <div>
-             <p className="text-[10px] font-black uppercase tracking-widest text-indigo-500/60 leading-none mb-1">Guardian Portal</p>
-             <h1 className="text-lg font-black tracking-tight text-slate-800 uppercase italic leading-none">My Children</h1>
+             <p className="text-[10px] font-black uppercase tracking-widest text-indigo-500/60 leading-none mb-1">Parent Portal</p>
+             <h1 className="text-lg font-black tracking-tight text-slate-900 uppercase leading-none">My Children</h1>
           </div>
         </Link>
         <div className="flex items-center gap-6">
           {user && (
-            <div className="hidden sm:flex flex-col items-end">
-               <p className="text-[10px] font-black uppercase tracking-widest text-slate-300 leading-none mb-1.5">Authorized User</p>
+            <div className="hidden sm:flex flex-col items-end px-2">
+               <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 leading-none mb-1.5">Authorized Account</p>
                <span className="text-xs font-black text-slate-900 leading-none">
                  {user.name || user.username}
                </span>
@@ -55,15 +55,15 @@ export function ParentLayout({
           <button
             type="button"
             onClick={() => signOut({ callbackUrl: '/login' })}
-            className="flex items-center gap-3 bg-slate-900 px-6 py-3 rounded-2xl text-[10px] font-black text-white uppercase tracking-widest hover:bg-rose-600 shadow-xl shadow-slate-900/10 transition-all active:scale-95"
+            className="flex items-center gap-3 bg-slate-50 px-5 py-2.5 rounded-xl text-[10px] font-black text-slate-600 uppercase tracking-widest hover:bg-rose-50 hover:text-rose-600 transition-all active:scale-95 border border-slate-100"
           >
             <LogOut className="size-4" />
-            Logout
+            Sign out
           </button>
         </div>
       </header>
-      <main className="p-4 lg:p-10">
-        <div className="bg-white/40 backdrop-blur-sm rounded-[3rem] border border-white/20 min-h-[calc(100vh-10rem)] shadow-2xl shadow-slate-200/50 overflow-hidden">
+      <main className="p-6 lg:p-10">
+        <div className="min-h-[calc(100vh-10rem)]">
           {children}
         </div>
       </main>
