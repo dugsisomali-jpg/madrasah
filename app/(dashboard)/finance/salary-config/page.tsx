@@ -44,22 +44,64 @@ export default function SalaryConfigPage() {
   useEffect(() => { fetchAll(); }, []);
 
   const handleCreateComponent = async (e: React.FormEvent) => {
-     e.preventDefault();
-     const form = e.target as HTMLFormElement;
-     const data = {
-        name: (form.elements.namedItem('name') as HTMLInputElement).value,
-        type: (form.elements.namedItem('type') as HTMLSelectElement).value,
-        description: (form.elements.namedItem('description') as HTMLTextAreaElement).value
-     };
-     try {
-        await fetch('/api/salary-components', {
-           method: 'POST',
-           headers: { 'Content-Type': 'application/json' },
-           body: JSON.stringify(data)
-        });
-        setShowCompModal(false);
-        fetchAll();
-     } catch (err) {}
+    e.preventDefault();
+    const form = e.target as HTMLFormElement;
+    const data = {
+      name: (form.elements.namedItem('name') as HTMLInputElement).value,
+      type: (form.elements.namedItem('type') as HTMLSelectElement).value,
+      description: (form.elements.namedItem('description') as HTMLTextAreaElement).value
+    };
+    try {
+      await fetch('/api/salary-components', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      setShowCompModal(false);
+      fetchAll();
+      Swal.fire({ icon: 'success', title: 'Component Defined', timer: 1500, showConfirmButton: false, toast: true, position: 'top-end' });
+    } catch (err) {
+      Swal.fire('Error', 'Failed to create component', 'error');
+    }
+  };
+
+  const [tempData, setTempData] = useState({ name: '', items: [] as { componentId: string; amount: number }[] });
+
+  const handleCreateTemplate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const res = await fetch('/api/salary-templates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: tempData.name,
+          components: tempData.items
+        })
+      });
+      if (!res.ok) throw new Error('Failed');
+      setShowTempModal(false);
+      setTempData({ name: '', items: [] });
+      fetchAll();
+      Swal.fire({ icon: 'success', title: 'Template Created', timer: 1500, showConfirmButton: false, toast: true, position: 'top-end' });
+    } catch (err) {
+      Swal.fire('Error', 'Failed to create template', 'error');
+    }
+  };
+
+  const addCompToTemp = (id: string) => {
+    if (tempData.items.some(i => i.componentId === id)) return;
+    setTempData(prev => ({ ...prev, items: [...prev.items, { componentId: id, amount: 0 }] }));
+  };
+
+  const updateTempCompAmount = (id: string, amount: number) => {
+    setTempData(prev => ({
+      ...prev,
+      items: prev.items.map(i => i.componentId === id ? { ...i, amount } : i)
+    }));
+  };
+
+  const removeCompFromTemp = (id: string) => {
+    setTempData(prev => ({ ...prev, items: prev.items.filter(i => i.componentId !== id) }));
   };
 
   return (
@@ -146,7 +188,7 @@ export default function SalaryConfigPage() {
                            <div key={idx} className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest bg-white/5 p-3 rounded-xl border border-white/5">
                               <span className="text-slate-400">{tc.component.name}</span>
                               <span className={tc.component.type === 'EARNING' ? 'text-emerald-400' : 'text-rose-400'}>
-                                 {tc.component.type === 'EARNING' ? '+' : '-'}${tc.amount}
+                                 {tc.component.type === 'EARNING' ? '+' : '-'} KES {tc.amount}
                               </span>
                            </div>
                         ))}
@@ -190,6 +232,99 @@ export default function SalaryConfigPage() {
                  </div>
                  <button type="submit" className="w-full bg-slate-900 px-8 py-5 rounded-[2rem] text-xs font-black text-white uppercase tracking-widest hover:bg-emerald-600 transition-all shadow-2xl active:scale-95">
                     Forge Component
+                 </button>
+              </form>
+           </div>
+        </div>
+      )}
+
+      {/* Template Modal */}
+      {showTempModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-4 overflow-y-auto italic-none">
+           <div className="w-full max-w-2xl bg-white rounded-[3rem] shadow-2xl p-10 my-auto animate-in fade-in zoom-in duration-300">
+              <div className="flex justify-between items-start mb-10">
+                 <div>
+                    <h2 className="text-2xl font-black text-slate-900 uppercase italic leading-none mb-2">Architect Template</h2>
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Construct Master Pay Package</p>
+                 </div>
+                 <button onClick={() => setShowTempModal(false)} className="text-slate-300 hover:text-slate-900 transition-colors">
+                    <XCircle className="h-8 w-8" />
+                 </button>
+              </div>
+
+              <form onSubmit={handleCreateTemplate} className="space-y-8">
+                 <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase text-slate-400 px-2 tracking-widest">Template Name</label>
+                    <input 
+                      required
+                      value={tempData.name}
+                      onChange={e => setTempData(p => ({ ...p, name: e.target.value }))}
+                      className="w-full bg-slate-50 rounded-[1.5rem] px-6 py-4 text-sm font-bold outline-none transition-all placeholder:text-slate-300"
+                      placeholder="e.g. Standard Teacher Grade 1" 
+                    />
+                 </div>
+
+                 <div className="space-y-4">
+                    <div className="flex items-center justify-between px-2">
+                       <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Components & Amounts</label>
+                       <div className="relative group">
+                          <button type="button" className="text-[10px] font-black text-indigo-600 uppercase tracking-widest flex items-center gap-1">
+                             <PlusCircle className="h-3 w-3" /> Add Component
+                          </button>
+                          <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-2xl shadow-2xl border border-slate-100 p-2 hidden group-hover:block z-50">
+                             {components.map(c => (
+                                <button 
+                                  key={c.id}
+                                  type="button"
+                                  onClick={() => addCompToTemp(c.id)}
+                                  className="w-full text-left px-4 py-2 text-[10px] font-bold uppercase tracking-widest hover:bg-slate-50 rounded-xl flex items-center justify-between"
+                                >
+                                   {c.name}
+                                   <span className="text-[8px] opacity-40">{c.type}</span>
+                                </button>
+                             ))}
+                          </div>
+                       </div>
+                    </div>
+
+                    <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                       {tempData.items.map(item => {
+                         const comp = components.find(c => c.id === item.componentId);
+                         return (
+                           <div key={item.componentId} className="bg-slate-50 p-4 rounded-2xl flex items-center justify-between border border-transparent hover:border-indigo-100 transition-all">
+                              <div className="flex items-center gap-3">
+                                 <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${comp?.type === 'EARNING' ? 'text-emerald-500' : 'text-rose-500'}`}>
+                                    {comp?.type === 'EARNING' ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
+                                 </div>
+                                 <span className="text-[11px] font-black uppercase tracking-tight text-slate-700">{comp?.name}</span>
+                              </div>
+                              <div className="flex items-center gap-4">
+                                 <div className="relative">
+                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[8px] font-black text-slate-300">KES</span>
+                                    <input 
+                                      type="number"
+                                      value={item.amount}
+                                      onChange={e => updateTempCompAmount(item.componentId, Number(e.target.value))}
+                                      className="w-28 bg-white border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-xs font-black outline-none focus:ring-2 ring-indigo-600/20"
+                                    />
+                                 </div>
+                                 <button type="button" onClick={() => removeCompFromTemp(item.componentId)} className="text-slate-300 hover:text-rose-600 transition-colors">
+                                    <Trash2 className="h-4 w-4" />
+                                 </button>
+                              </div>
+                           </div>
+                         );
+                       })}
+                       {tempData.items.length === 0 && (
+                         <div className="py-10 text-center border-2 border-dashed border-slate-100 rounded-[2rem]">
+                            <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest italic">No components added yet</p>
+                         </div>
+                       )}
+                    </div>
+                 </div>
+
+                 <button type="submit" className="w-full bg-slate-900 px-8 py-5 rounded-[2rem] text-xs font-black text-white uppercase tracking-widest hover:bg-indigo-600 transition-all shadow-2xl active:scale-95">
+                    Forge Template
                  </button>
               </form>
            </div>

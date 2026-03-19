@@ -28,12 +28,14 @@ export default async function DashboardLayout({
   const permissions = userId ? await getUserPermissions(userId) : [];
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-slate-50/50">
       <AppSidebar user={session.user} permissions={permissions} />
-      <main className="lg:pl-64">
+      <main className="lg:pl-72 transition-all duration-300">
         <AppHeader user={session.user} />
-        <div className="min-h-[calc(100vh-3.5rem)] lg:min-h-[calc(100vh-3.5rem)] px-2 sm:px-4 lg:px-6">
-          {children}
+        <div className="min-h-[calc(100vh-5rem)] p-4 lg:p-10">
+          <div className="bg-white/40 backdrop-blur-sm rounded-[3rem] border border-white/20 min-h-full">
+            {children}
+          </div>
         </div>
       </main>
     </div>
