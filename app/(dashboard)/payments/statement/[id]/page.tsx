@@ -110,7 +110,6 @@ export default function StatementPage({ params }: { params: Promise<{ id: string
 
   if (!statement) return <div className="p-10 text-center font-bold text-destructive">Failed to load statement details.</div>;
 
-  // month counts for formatting
   const firstStudent = statement.students[0];
   const monthKeys = firstStudent?.payments.map(p => `${p.year}-${String(p.month).padStart(2, '0')}`) || [];
   const monthLabels = firstStudent?.payments.map(p => `${MONTHS[p.month - 1]} ${String(p.year).slice(-2)}`) || [];
@@ -149,6 +148,7 @@ export default function StatementPage({ params }: { params: Promise<{ id: string
       <div className="mx-auto max-w-7xl print:max-w-none print:shadow-none shadow-2xl shadow-slate-200/40 border border-slate-100 bg-white p-2 print:p-0 print:border-none">
         <div 
           ref={printRef}
+          id="printable-statement"
           className="bg-white p-10 md:p-14 print:p-8 text-slate-900"
           style={{ fontFamily: "'Inter', sans-serif" }}
         >
@@ -198,12 +198,10 @@ export default function StatementPage({ params }: { params: Promise<{ id: string
                 <tr className="bg-slate-100">
                   <th className="py-4 px-4 text-[11px] font-black text-slate-900 uppercase tracking-widest border border-slate-900 sticky left-0 bg-slate-100 z-10 w-[200px]">Student Name</th>
                   {monthLabels.map((month, mIdx) => (
-                    <th key={mIdx} className="py-4 px-2 text-[10px] font-black text-slate-900 uppercase tracking-widest text-right border border-slate-900 whitespace-nowrap min-w-[80px]">
+                    <th key={mIdx} className="py-4 px-3 text-[10px] font-black text-slate-900 uppercase tracking-widest text-right border border-slate-900 whitespace-nowrap min-w-[80px]">
                       {month}
                     </th>
                   ))}
-                  <th className="py-4 px-4 text-[11px] font-black text-slate-900 uppercase tracking-widest text-right border border-slate-900 bg-slate-200 w-[120px]">Total Paid</th>
-                  <th className="py-4 px-4 text-[11px] font-black text-slate-900 uppercase tracking-widest text-right border border-slate-900 bg-rose-50 w-[120px]">Total Arrears</th>
                 </tr>
               </thead>
               <tbody className="font-mono text-[11px] uppercase text-slate-900">
@@ -226,12 +224,6 @@ export default function StatementPage({ params }: { params: Promise<{ id: string
                           </td>
                         );
                       })}
-                      <td className="py-4 px-4 text-right font-black border border-slate-900 bg-slate-50 text-emerald-700">
-                        {student.summary.totalPaid.toLocaleString()}
-                      </td>
-                      <td className="py-4 px-4 text-right font-black border border-slate-900 bg-rose-50/50 text-rose-700">
-                        {student.summary.currentBalance.toLocaleString()}
-                      </td>
                     </tr>
                   );
                 })}
@@ -251,12 +243,6 @@ export default function StatementPage({ params }: { params: Promise<{ id: string
                             </td>
                         );
                     })}
-                    <td className="py-5 px-4 text-right font-black text-emerald-800 text-sm border border-slate-900 bg-emerald-50">
-                        {statement.grandSummary.totalPaid.toLocaleString()}
-                    </td>
-                    <td className="py-5 px-4 text-right font-black text-rose-900 text-sm border border-slate-900 bg-rose-100 font-bold">
-                        {statement.grandSummary.totalBalance.toLocaleString()} KES
-                    </td>
                  </tr>
               </tfoot>
             </table>
@@ -276,15 +262,46 @@ export default function StatementPage({ params }: { params: Promise<{ id: string
 
       <style jsx global>{`
         @media print {
-          body { background: white !important; }
-          .min-h-screen { background: transparent !important; padding: 0 !important; }
-          .mx-auto { max-width: none !important; margin: 0 !important; }
-          .shadow-2xl { box-shadow: none !important; }
-          .bg-slate-100\/30 { background: white !important; }
-          @page { margin: 1cm; size: a4 landscape; }
-          table { border-collapse: collapse !important; width: 100% !important; border: 2px solid #000 !important; }
-          th, td { border: 1px solid #000 !important; padding: 4px !important; }
-          .sticky { position: static !important; }
+          html, body { 
+            height: auto !important; 
+            overflow: visible !important; 
+            background: white !important; 
+          }
+          body * { 
+            visibility: hidden !important; 
+          }
+          #printable-statement, #printable-statement * { 
+            visibility: visible !important; 
+          }
+          #printable-statement { 
+            position: absolute !important; 
+            left: 0 !important; 
+            top: 0 !important; 
+            width: 100% !important; 
+            margin: 0 !important;
+            padding: 0 !important;
+            box-shadow: none !important;
+          }
+          @page { 
+            margin: 1.5cm; 
+            size: a4 landscape; 
+          }
+          table { 
+            border-collapse: collapse !important; 
+            width: 100% !important; 
+            border: 1px solid #000 !important; 
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+          th, td { 
+            border: 1px solid #000 !important; 
+            padding: 6px !important; 
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+          .sticky { 
+            position: static !important; 
+          }
         }
       `}</style>
     </div>
