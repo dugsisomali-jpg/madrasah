@@ -9,6 +9,7 @@ const createSchema = z.object({
   username: z.string().min(1),
   password: z.string().min(6),
   name: z.string().optional(),
+  email: z.string().email().optional().or(z.literal('')),
 });
 
 export async function GET() {
@@ -28,10 +29,11 @@ export async function GET() {
       },
     });
     return NextResponse.json(
-      users.map(({ id, username, name, createdAt, roles, directPermissions }) => ({
+      users.map(({ id, username, name, email, createdAt, roles, directPermissions }) => ({
         id,
         username,
         name,
+        email,
         createdAt,
         roles,
         directPermissions: directPermissions ?? [],
@@ -57,9 +59,19 @@ export async function POST(req: NextRequest) {
     const existing = await prisma.user.findUnique({ where: { username: data.username } });
     if (existing) return NextResponse.json({ error: 'Username already exists' }, { status: 400 });
 
+    if (data.email) {
+      const emailExisting = await prisma.user.findUnique({ where: { email: data.email } });
+      if (emailExisting) return NextResponse.json({ error: 'Email already exists' }, { status: 400 });
+    }
+
     const passwordHash = await bcrypt.hash(data.password, 10);
     const user = await prisma.user.create({
-      data: { username: data.username, passwordHash, name: data.name },
+      data: { 
+        username: data.username, 
+        passwordHash, 
+        name: data.name,
+        email: data.email || null,
+      },
       include: {
         roles: { select: { id: true, name: true } },
         directPermissions: { select: { id: true, name: true } },
@@ -71,6 +83,7 @@ export async function POST(req: NextRequest) {
         id: user.id,
         username: user.username,
         name: user.name,
+        email: user.email,
         roles: user.roles,
         directPermissions: user.directPermissions ?? [],
       },

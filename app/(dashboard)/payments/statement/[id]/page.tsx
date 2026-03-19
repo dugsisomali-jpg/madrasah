@@ -73,6 +73,19 @@ export default function StatementPage({ params }: { params: Promise<{ id: string
       .finally(() => setLoading(false));
   }, [id, from, to]);
 
+  const [settings, setSettings] = useState<Record<string, string>>({});
+  useEffect(() => {
+    fetch('/api/settings')
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          const s: Record<string, string> = {};
+          data.forEach(item => { s[item.key] = item.value; });
+          setSettings(s);
+        }
+      });
+  }, []);
+
   const handlePrint = () => {
     window.print();
   };
@@ -156,12 +169,16 @@ export default function StatementPage({ params }: { params: Promise<{ id: string
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end border-b-4 border-slate-900 pb-10 mb-12 gap-8">
             <div className="branding">
               <div className="flex items-center gap-5 mb-4">
-                <div className="h-12 w-12 flex items-center justify-center rounded-2xl bg-slate-900 text-white shadow-xl shadow-slate-900/10">
-                  <FileText className="h-6 w-6" />
-                </div>
+                {settings.logo ? (
+                  <img src={settings.logo} alt="Logo" className="h-16 w-auto object-contain" />
+                ) : (
+                  <div className="h-12 w-12 flex items-center justify-center rounded-2xl bg-slate-900 text-white shadow-xl shadow-slate-900/10">
+                    <FileText className="h-6 w-6" />
+                  </div>
+                )}
                 <div>
-                  <h1 className="text-3xl font-black tracking-tighter text-slate-900 leading-none uppercase">Account Statement</h1>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mt-1.5">Consolidated Student Ledger</p>
+                  <h1 className="text-2xl font-black tracking-tighter text-slate-900 leading-none uppercase italic">{settings.name || 'Madrasah'}</h1>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mt-1.5">{settings.address || 'Account Statement'}</p>
                 </div>
               </div>
               <div className="flex items-center gap-3 sm:ml-16">

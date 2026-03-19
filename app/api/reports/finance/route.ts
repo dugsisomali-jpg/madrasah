@@ -31,11 +31,14 @@ export async function GET(req: NextRequest) {
     });
     const totalExpenses = expenseData.reduce((sum, e) => sum + Number(e.amount), 0);
 
-    // 3. Fetch Payroll (Salary Payments)
-    const payrollData = await prisma.salaryPayment.findMany({
-      where: from || to ? { paymentDate: dateQuery } : {},
+    // 3. Fetch Payroll (Confirmed Payslips)
+    const payslipData = await prisma.payslip.findMany({
+      where: {
+        status: 'PAID',
+        paymentDate: from || to ? dateQuery : undefined,
+      },
     });
-    const totalPayroll = payrollData.reduce((sum, p) => sum + Number(p.amount), 0);
+    const totalPayroll = payslipData.reduce((sum, p) => sum + Number(p.netSalary), 0);
 
     // Category Breakdown for Expenses
     const expenseCategories: Record<string, number> = {};

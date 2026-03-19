@@ -12,6 +12,7 @@ model User {
   username              String                 @unique
   passwordHash          String
   name                  String?
+  email                 String?                @unique
   createdAt             DateTime               @default(now())
   roles                 Role[]                 @relation("UserRole")
   directPermissions     Permission[]           @relation("UserPermission")
@@ -19,8 +20,126 @@ model User {
   studentsTaught        Student[]              @relation("StudentTeacher")
   memorizationRecorded  memorization_records[] @relation("MemorizationTeacher")
   parentReceiptBatches  ReceiptBatch[]         @relation("ParentReceiptBatches")
-  salaryPayments        SalaryPayment[]        @relation("UserSalaries")
-  salary                Decimal?               @db.Decimal(10, 2)
+  employee              Employee?              @relation("EmployeeUser")
+}
+
+model Employee {
+  id               String               @id @default(cuid())
+  name             String
+  email            String?              @unique
+  phone            String?
+  accountNo        String?
+  department       String?              // Academic, Finance, etc.
+  jobRole          String?              // Teacher, Accountant, etc.
+  employmentType   String?              // Full-time, Part-time, Contract
+  status           EmployeeStatus       @default(ACTIVE)
+  joinDate         DateTime?            @db.Date
+  bankDetails      String?              // Bank or Mobile Details
+  userId           String?              @unique
+  user             User?                @relation("EmployeeUser", fields: [userId], references: [id], onDelete: SetNull)
+  salaryTemplateId String?
+  salaryTemplate   SalaryTemplate?      @relation(fields: [salaryTemplateId], references: [id])
+  employeeSalary   EmployeeSalary[]
+  payslips         Payslip[]
+  attendance       EmployeeAttendance[]
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+}
+
+enum EmployeeStatus {
+  ACTIVE
+  SUSPENDED
+  TERMINATED
+}
+
+model SalaryComponent {
+  id          String                @id @default(cuid())
+  name        String                @unique
+  type        SalaryComponentType
+  description String?
+  isReusable  Boolean               @default(true)
+  amounts     SalaryComponentAmount[]
+}
+
+enum SalaryComponentType {
+  EARNING
+  DEDUCTION
+}
+
+model SalaryTemplate {
+  id          String                @id @default(cuid())
+  name        String                @unique
+  components  SalaryComponentAmount[]
+  employees   Employee[]
+}
+
+model SalaryComponentAmount {
+  id                String          @id @default(cuid())
+  salaryComponentId String
+  salaryTemplateId  String?
+  employeeSalaryId  String?
+  amount            Decimal         @db.Decimal(10, 2)
+  component         SalaryComponent @relation(fields: [salaryComponentId], references: [id])
+  template          SalaryTemplate? @relation(fields: [salaryTemplateId], references: [id])
+  employeeSalary    EmployeeSalary? @relation(fields: [employeeSalaryId], references: [id])
+}
+
+model EmployeeSalary {
+  id          String                @id @default(cuid())
+  employeeId  String
+  employee    Employee              @relation(fields: [employeeId], references: [id])
+  components  SalaryComponentAmount[]
+}
+
+model PayrollRun {
+  id        String           @id @default(cuid())
+  month     Int
+  year      Int
+  status    PayrollRunStatus @default(DRAFT)
+  approvedBy String?
+  lockedAt  DateTime?
+  payslips  Payslip[]
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+}
+
+enum PayrollRunStatus {
+  DRAFT
+  APPROVED
+  LOCKED
+}
+
+model Payslip {
+  id             String          @id @default(cuid())
+  payrollRunId   String
+  employeeId     String
+  grossEarnings  Decimal         @db.Decimal(10, 2)
+  totalDeductions Decimal        @db.Decimal(10, 2)
+  netSalary      Decimal         @db.Decimal(10, 2)
+  status         PaymentStatus   @default(PENDING)
+  paymentMethod  String?         // Bank Transfer, Mobile Money, Cash
+  reference      String?
+  paymentDate    DateTime?
+  payrollRun     PayrollRun      @relation(fields: [payrollRunId], references: [id])
+  employee       Employee        @relation(fields: [employeeId], references: [id])
+  createdAt      DateTime        @default(now())
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+}
+
+model EmployeeAttendance {
+  id         String           @id @default(cuid())
+  employeeId String
+  date       DateTime         @db.Date
+  status     AttendanceStatus
+  notes      String?
+  employee   Employee         @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([employeeId, date])
 }
 
 model Role {
@@ -223,22 +342,6 @@ model Expense {
   date        DateTime @db.Date
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-}
-
-model SalaryPayment {
-  id          String   @id @default(cuid())
-  userId      String
-  amount      Decimal  @db.Decimal(10, 2)
-  month       Int
-  year        Int
-  paymentDate DateTime @default(now())
-  isAdvance   Boolean  @default(false)
-  notes       String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  User        User     @relation("UserSalaries", fields: [userId], references: [id])
-
-  @@index([userId])
 }
 
 model SystemSetting {
