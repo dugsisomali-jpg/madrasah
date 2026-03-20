@@ -29,17 +29,17 @@ model Employee {
   email            String?              @unique
   phone            String?
   accountNo        String?
+  bankName         String?              // Added for standard ERP flow
+  paymentMethod    String?              @default("CASH") // CASH, BANK_TRANSFER, MPESA
+  basicSalary      Decimal              @db.Decimal(10, 2) @default(0) // Centralized Salary
   department       String?              // Academic, Finance, etc.
   jobRole          String?              // Teacher, Accountant, etc.
   employmentType   String?              // Full-time, Part-time, Contract
   status           EmployeeStatus       @default(ACTIVE)
   joinDate         DateTime?            @db.Date
-  bankDetails      String?              // Bank or Mobile Details
+  bankDetails      String?              // General Notes
   userId           String?              @unique
   user             User?                @relation("EmployeeUser", fields: [userId], references: [id], onDelete: SetNull)
-  salaryTemplateId String?
-  salaryTemplate   SalaryTemplate?      @relation(fields: [salaryTemplateId], references: [id])
-  employeeSalary   EmployeeSalary[]
   payslips         Payslip[]
   attendance       EmployeeAttendance[]
   createdAt        DateTime             @default(now())
@@ -52,44 +52,7 @@ enum EmployeeStatus {
   TERMINATED
 }
 
-model SalaryComponent {
-  id          String                @id @default(cuid())
-  name        String                @unique
-  type        SalaryComponentType
-  description String?
-  isReusable  Boolean               @default(true)
-  amounts     SalaryComponentAmount[]
-}
-
-enum SalaryComponentType {
-  EARNING
-  DEDUCTION
-}
-
-model SalaryTemplate {
-  id          String                @id @default(cuid())
-  name        String                @unique
-  components  SalaryComponentAmount[]
-  employees   Employee[]
-}
-
-model SalaryComponentAmount {
-  id                String          @id @default(cuid())
-  salaryComponentId String
-  salaryTemplateId  String?
-  employeeSalaryId  String?
-  amount            Decimal         @db.Decimal(10, 2)
-  component         SalaryComponent @relation(fields: [salaryComponentId], references: [id])
-  template          SalaryTemplate? @relation(fields: [salaryTemplateId], references: [id])
-  employeeSalary    EmployeeSalary? @relation(fields: [employeeSalaryId], references: [id])
-}
-
-model EmployeeSalary {
-  id          String                @id @default(cuid())
-  employeeId  String
-  employee    Employee              @relation(fields: [employeeId], references: [id])
-  components  SalaryComponentAmount[]
-}
+// Removed: SalaryComponent, SalaryTemplate, SalaryComponentAmount, EmployeeSalary
 
 model PayrollRun {
   id        String           @id @default(cuid())

@@ -19,14 +19,11 @@ const routeTitles: Record<string, string> = {
   '/': 'Dashboard',
   '/memorization': 'Memorization',
   '/students': 'Students',
-  '/teachers': 'Teachers',
   '/employees': 'Employees',
   '/payments': 'Students Payments',
   '/receivables': 'Students Receivables',
   '/finance/expenses': 'Expenses',
   '/finance/payroll-runs': 'Payroll Runs',
-  '/finance/salary-config': 'Salary Settings',
-  '/my-payslips': 'My Payslips',
   '/exams': 'Exams',
   '/subjects': 'Subjects',
   '/user-management': 'User Management',
@@ -110,16 +107,6 @@ export function AppHeader({ user }: { user: any }) {
                 </div>
                 
                 <div className="space-y-1">
-                   <Link 
-                     href="/my-payslips"
-                     onClick={() => setIsOpen(false)}
-                     className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-[11px] font-bold uppercase tracking-widest text-slate-600 hover:bg-slate-50 transition-colors"
-                   >
-                      <FileText className="size-4 text-slate-400" />
-                      My Payslips
-                   </Link>
-                   
-                   <div className="h-px bg-slate-100 my-2 mx-4" />
                    
                    <button 
                      onClick={() => signOut({ callbackUrl: '/login' })}

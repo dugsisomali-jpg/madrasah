@@ -41,27 +41,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     });
     if (existing) return NextResponse.json({ error: 'Employee already added to this run' }, { status: 400 });
 
-    // 2. Get employee with template
+    // 2. Get employee
     const emp = await prisma.employee.findUnique({
       where: { id: employeeId },
-      include: {
-        salaryTemplate: {
-          include: { components: { include: { component: true } } }
-        }
-      }
     });
     if (!emp) return NextResponse.json({ error: 'Employee not found' }, { status: 404 });
 
-    // 3. Calculate from template
-    let gross = 0;
-    let deductions = 0;
-
-    if (emp.salaryTemplate) {
-      emp.salaryTemplate.components.forEach((c: any) => {
-        if (c.component.type === 'EARNING') gross += Number(c.amount);
-        else deductions += Number(c.amount);
-      });
-    }
+    // 3. Simple ERP Calculation: Gross = Basic Salary
+    const gross = Number(emp.basicSalary) || 0;
+    const deductions = 0; // Standard ERP: one-off deductions handled later or via specific adjustment fields
 
     // 4. Create Payslip
     const payslip = await prisma.payslip.create({

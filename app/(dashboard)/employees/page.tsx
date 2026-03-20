@@ -16,7 +16,8 @@ import {
   Mail,
   Loader2,
   XCircle,
-  Plus
+  Plus,
+  Banknote
 } from 'lucide-react';
 import Swal from 'sweetalert2';
 
@@ -31,6 +32,9 @@ type Employee = {
   status: 'ACTIVE' | 'SUSPENDED' | 'TERMINATED';
   joinDate?: string;
   userId?: string;
+  basicSalary: number;
+  bankName?: string;
+  paymentMethod?: string;
   user?: { username: string };
 };
 
@@ -54,7 +58,11 @@ export default function EmployeesPage() {
     employmentType: 'Full-time',
     status: 'ACTIVE',
     joinDate: new Date().toISOString().split('T')[0],
-    userId: ''
+    userId: '',
+    basicSalary: 0,
+    bankName: '',
+    accountNo: '',
+    paymentMethod: 'CASH'
   });
 
   const fetchEmployees = async () => {
@@ -100,7 +108,8 @@ export default function EmployeesPage() {
       setFormData({
         name: '', email: '', phone: '', department: 'Academic', 
         jobRole: '', employmentType: 'Full-time', status: 'ACTIVE', 
-        joinDate: new Date().toISOString().split('T')[0], userId: ''
+        joinDate: new Date().toISOString().split('T')[0], userId: '',
+        basicSalary: 0, bankName: '', accountNo: '', paymentMethod: 'CASH'
       });
       fetchEmployees();
       Swal.fire({ icon: 'success', title: 'Employee Added', timer: 1500, showConfirmButton: false, toast: true, position: 'top-end' });
@@ -253,6 +262,9 @@ export default function EmployeesPage() {
                               <p className="text-[10px] uppercase tracking-widest flex items-center gap-2">
                                  <Briefcase className="h-3 w-3" /> {e.jobRole}
                               </p>
+                              <p className="text-[10px] font-black text-emerald-600 uppercase tracking-tighter pt-1 flex items-center gap-1">
+                                 <Banknote className="h-3 w-3" /> KES {Number(e.basicSalary).toLocaleString()}
+                              </p>
                            </div>
                         </td>
                         <td className="py-8 px-10">
@@ -382,6 +394,63 @@ export default function EmployeesPage() {
                           />
                        </div>
                     </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                       <div className="space-y-2">
+                          <label className="text-[10px] font-black uppercase text-slate-400 px-2 tracking-widest">Monthly Basic Salary</label>
+                          <div className="relative">
+                             <span className="absolute left-6 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-300">KES</span>
+                             <input 
+                               type="number" 
+                               value={formData.basicSalary}
+                               onChange={e => setFormData(prev => ({ ...prev, basicSalary: Number(e.target.value) }))}
+                               className="w-full bg-slate-50 border-2 border-transparent focus:border-indigo-600/10 focus:bg-white rounded-[1.5rem] pl-16 pr-6 py-4 text-sm font-bold outline-none transition-all"
+                               placeholder="0.00"
+                             />
+                          </div>
+                       </div>
+                       <div className="space-y-2">
+                          <label className="text-[10px] font-black uppercase text-slate-400 px-2 tracking-widest">Payment Method</label>
+                          <select 
+                            value={formData.paymentMethod}
+                            onChange={e => setFormData(prev => ({ ...prev, paymentMethod: e.target.value }))}
+                            className="w-full bg-slate-50 border-2 border-transparent focus:border-indigo-600/10 focus:bg-white rounded-[1.5rem] px-6 py-4 text-sm font-bold outline-none transition-all"
+                          >
+                             <option value="CASH">Cash Payment</option>
+                             <option value="BANK_TRANSFER">Bank Transfer</option>
+                             <option value="MPESA">Mobile Money (MPESA)</option>
+                          </select>
+                       </div>
+                    </div>
+
+                    {formData.paymentMethod !== 'CASH' && (
+                       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 animate-in fade-in slide-in-from-top-4 duration-300">
+                          <div className="space-y-2">
+                             <label className="text-[10px] font-black uppercase text-slate-400 px-2 tracking-widest">
+                                {formData.paymentMethod === 'BANK_TRANSFER' ? 'Bank Name' : 'Provider Name'}
+                             </label>
+                             <input 
+                               type="text" 
+                               value={formData.bankName}
+                               onChange={e => setFormData(prev => ({ ...prev, bankName: e.target.value }))}
+                               className="w-full bg-slate-50 border-2 border-transparent focus:border-indigo-600/10 focus:bg-white rounded-[1.5rem] px-6 py-4 text-sm font-bold outline-none transition-all"
+                               placeholder={formData.paymentMethod === 'BANK_TRANSFER' ? 'e.g. Equity Bank' : 'e.g. Safaricom'}
+                             />
+                          </div>
+                          <div className="space-y-2">
+                             <label className="text-[10px] font-black uppercase text-slate-400 px-2 tracking-widest">
+                                {formData.paymentMethod === 'BANK_TRANSFER' ? 'Account Number' : 'Phone Number'}
+                             </label>
+                             <input 
+                               type="text" 
+                               value={formData.accountNo}
+                               onChange={e => setFormData(prev => ({ ...prev, accountNo: e.target.value }))}
+                               className="w-full bg-slate-50 border-2 border-transparent focus:border-indigo-600/10 focus:bg-white rounded-[1.5rem] px-6 py-4 text-sm font-bold outline-none transition-all"
+                               placeholder="Required for payroll"
+                             />
+                          </div>
+                       </div>
+                    )}
 
                     <div className="flex gap-4 pt-10">
                        <button 

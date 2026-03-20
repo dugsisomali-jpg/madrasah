@@ -8,6 +8,9 @@ const employeeSchema = z.object({
   email: z.string().email().optional().or(z.literal('')),
   phone: z.string().optional(),
   accountNo: z.string().optional(),
+  bankName: z.string().optional(),
+  paymentMethod: z.enum(['CASH', 'BANK_TRANSFER', 'MPESA']).optional(),
+  basicSalary: z.number().min(0).optional(),
   department: z.string().optional(),
   jobRole: z.string().optional(),
   employmentType: z.string().optional(),
@@ -15,7 +18,6 @@ const employeeSchema = z.object({
   joinDate: z.string().optional(),
   bankDetails: z.string().optional(),
   userId: z.string().optional().nullable(),
-  salaryTemplateId: z.string().optional().nullable(),
 });
 
 export async function GET(req: NextRequest) {
@@ -29,7 +31,6 @@ export async function GET(req: NextRequest) {
     const employees = await prisma.employee.findMany({
       include: {
         user: { select: { id: true, username: true } },
-        salaryTemplate: { select: { id: true, name: true } },
       },
       orderBy: { name: 'asc' },
     });
