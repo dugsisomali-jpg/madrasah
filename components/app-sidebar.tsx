@@ -35,7 +35,7 @@ const navItems: NavItem[] = [
   { href: '/employees', label: 'Employees', icon: GraduationCap, permission: 'employees.read' },
   { href: '/payments', label: 'Students Payments', icon: Banknote, permission: 'payments.read' },
   { href: '/receivables', label: 'Students Receivables', icon: Wallet, permission: 'payments.read' },
-  { href: '/finance', label: 'Finance Dashboard', icon: LayoutDashboard },
+  { href: '/finance', label: 'Reports', icon: LayoutDashboard },
   { href: '/finance/salaries', label: 'Salaries', icon: Banknote, permission: 'hr.manage' },
   { href: '/finance/expenses', label: 'Expenses', icon: PieChart, permission: 'expenses.read' },
   { href: '/exams', label: 'Exams', icon: FileCheck, permission: 'exams.manage' },
