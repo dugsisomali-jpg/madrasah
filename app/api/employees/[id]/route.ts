@@ -15,7 +15,6 @@ const employeeSchema = z.object({
   joinDate: z.string().optional().nullable(),
   bankDetails: z.string().optional().nullable(),
   userId: z.string().optional().nullable(),
-  salaryTemplateId: z.string().optional().nullable(),
 });
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -28,7 +27,6 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       where: { id },
       include: {
         user: { select: { id: true, username: true } },
-        salaryTemplate: { select: { id: true, name: true } },
       },
     });
     if (!employee) return NextResponse.json({ error: 'Not found' }, { status: 404 });

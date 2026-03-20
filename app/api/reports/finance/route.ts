@@ -31,14 +31,11 @@ export async function GET(req: NextRequest) {
     });
     const totalExpenses = expenseData.reduce((sum: number, e: any) => sum + Number(e.amount), 0);
 
-    // 3. Fetch Payroll (Confirmed Payslips)
-    const payslipData = await prisma.payslip.findMany({
-      where: {
-        status: 'PAID',
-        paymentDate: from || to ? dateQuery : undefined,
-      },
+    // 3. Fetch Payroll (Salary Payments)
+    const salaryData = await prisma.salaryPayment.findMany({
+      where: from || to ? { paymentDate: dateQuery } : {},
     });
-    const totalPayroll = payslipData.reduce((sum: number, p: any) => sum + Number(p.netSalary), 0);
+    const totalPayroll = salaryData.reduce((sum: number, p: any) => sum + Number(p.amount), 0);
 
     // 4. Category Breakdown for Expenses
     const expenseCategories: Record<string, number> = {};
@@ -50,7 +47,7 @@ export async function GET(req: NextRequest) {
     // 5. Fetch Detailed Transactions (Recent 50)
     const recentReceipts = await prisma.receipt.findMany({
       where: from || to ? { date: dateQuery } : {},
-      take: 25,
+      take: 20,
       orderBy: { date: 'desc' },
       include: { 
         Payment: { 
@@ -61,8 +58,15 @@ export async function GET(req: NextRequest) {
 
     const recentExpenses = await prisma.expense.findMany({
       where: from || to ? { date: dateQuery } : {},
-      take: 25,
+      take: 15,
       orderBy: { date: 'desc' },
+    });
+
+    const recentSalaries = await prisma.salaryPayment.findMany({
+      where: from || to ? { paymentDate: dateQuery } : {},
+      take: 15,
+      orderBy: { paymentDate: 'desc' },
+      include: { employee: { select: { name: true } } }
     });
 
     const transactions = [
@@ -81,6 +85,14 @@ export async function GET(req: NextRequest) {
         category: e.category,
         type: 'EXPENSE',
         amount: Number(e.amount)
+      })),
+      ...recentSalaries.map((s: any) => ({
+        id: s.id,
+        date: s.paymentDate,
+        description: `Salary - ${s.employee.name}`,
+        category: 'Payroll',
+        type: 'EXPENSE',
+        amount: Number(s.amount)
       }))
     ].sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
