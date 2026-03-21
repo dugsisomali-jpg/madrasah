@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
+import { SearchableSelect } from '@/components/SearchableSelect';
 
 type Student = { id: string; name: string };
 type TeacherUser = { id: string; username: string; name?: string | null };
@@ -100,27 +101,26 @@ export function AddMemorizationForm({ onSuccess, onClose }: { onSuccess?: () => 
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
             <label className="text-sm font-medium text-foreground">Student</label>
-            <select value={studentId} onChange={(e) => setStudentId(e.target.value)} required className={selectCls}>
-              <option value="">Select student</option>
-              {students.map((s) => (
-                <option key={s.id} value={s.id}>{s.name}</option>
-              ))}
-            </select>
+            <SearchableSelect
+              options={students.map((s) => ({ value: s.id, label: s.name }))}
+              value={studentId}
+              onChange={setStudentId}
+              placeholder="Select student"
+              required
+              className="w-full"
+            />
           </div>
           <div className="space-y-2">
             <label className="text-sm font-medium text-foreground">Teacher</label>
-            <select
+            <SearchableSelect
+              options={teachers.map((t) => ({ value: t.id, label: t.name || t.username }))}
               value={teacherId}
-              onChange={(e) => setTeacherId(e.target.value)}
+              onChange={setTeacherId}
+              placeholder="Select teacher"
               required
               disabled={!!(session?.user?.id && teachers.some((t) => t.id === session.user.id))}
-              className={selectCls}
-            >
-              <option value="">Select teacher</option>
-              {teachers.map((t) => (
-                <option key={t.id} value={t.id}>{t.name || t.username}</option>
-              ))}
-            </select>
+              className="w-full"
+            />
           </div>
         </div>
 

@@ -4,9 +4,9 @@ import { z } from 'zod';
 import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/prisma';
 import { requireAuth, hasPermission } from '@/lib/auth-utils';
+import { generateNextUsername } from '@/lib/utils';
 
 const createSchema = z.object({
-  username: z.string().min(1),
   password: z.string().min(6),
   name: z.string().optional(),
   email: z.string().email().optional().or(z.literal('')),
@@ -56,8 +56,7 @@ export async function POST(req: NextRequest) {
   try {
     const data = createSchema.parse(await req.json());
 
-    const existing = await prisma.user.findUnique({ where: { username: data.username } });
-    if (existing) return NextResponse.json({ error: 'Username already exists' }, { status: 400 });
+    const username = await generateNextUsername(prisma);
 
     if (data.email) {
       const emailExisting = await prisma.user.findUnique({ where: { email: data.email } });
@@ -67,7 +66,7 @@ export async function POST(req: NextRequest) {
     const passwordHash = await bcrypt.hash(data.password, 10);
     const user = await prisma.user.create({
       data: { 
-        username: data.username, 
+        username, 
         passwordHash, 
         name: data.name,
         email: data.email || null,

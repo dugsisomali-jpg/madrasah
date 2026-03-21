@@ -24,7 +24,6 @@ export function UsersContent() {
   const [users, setUsers] = useState<User[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [permissions, setPermissions] = useState<Permission[]>([]);
-  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
@@ -70,19 +69,17 @@ export function UsersContent() {
 
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!username.trim() || !password.trim()) return;
+    if (!password.trim()) return;
     setLoading(true);
     fetch('/api/users', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        username: username.trim(),
         password,
         name: name.trim() || undefined,
       }),
     })
       .then(() => {
-        setUsername('');
         setPassword('');
         setName('');
         setAddOpen(false);
@@ -196,21 +193,15 @@ export function UsersContent() {
           <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-2xl border border-slate-200/60 bg-card shadow-2xl dark:border-slate-700/50">
             <div className="border-b border-border bg-gradient-to-r from-slate-100 to-transparent px-6 py-4 dark:from-slate-800/50">
               <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Add new user</h2>
-              <p className="mt-1 text-sm text-muted-foreground">Username and password are required.</p>
             </div>
             <form onSubmit={handleCreate} className="space-y-4 p-6">
               <div>
-                <label htmlFor="username" className="mb-1.5 block text-sm font-medium">
-                  Username
+                <label className="mb-1.5 block text-sm font-medium opacity-50">
+                  Username (Auto-generated)
                 </label>
-                <input
-                  id="username"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  placeholder="e.g. admin"
-                  required
-                  className={inputCls}
-                />
+                <div className="h-10 w-full rounded-xl border border-input bg-muted/30 px-4 py-2 text-sm text-muted-foreground">
+                  Sequential ID (e.g. 0001)
+                </div>
               </div>
               <div>
                 <label htmlFor="password" className="mb-1.5 block text-sm font-medium">

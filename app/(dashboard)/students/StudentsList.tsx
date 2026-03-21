@@ -265,6 +265,12 @@ function StudentsListInner() {
     emergencyContactName: '',
     emergencyContactPhone: '',
   });
+  const [quickParentOpen, setQuickParentOpen] = useState(false);
+  const [quickParentForm, setQuickParentForm] = useState({
+    name: '',
+    password: '',
+  });
+  const [quickParentLoading, setQuickParentLoading] = useState(false);
 
   const load = useCallback(() => {
     setStudentsLoading(true);
@@ -527,6 +533,40 @@ function StudentsListInner() {
     setParentDropdownOpen(false);
   };
 
+  const handleQuickParentCreate = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!quickParentForm.name.trim() || !quickParentForm.password.trim()) return;
+    setQuickParentLoading(true);
+    fetch('/api/users/parents/quick', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(quickParentForm),
+    })
+      .then(async (res) => {
+        if (!res.ok) {
+          const d = await res.json();
+          throw new Error(d.error || 'Failed to create parent');
+        }
+        const newParent = await res.json();
+        Swal.fire({ icon: 'success', title: 'Parent Created', text: `Parent ${newParent.name || newParent.username} created and selected`, timer: 2000, showConfirmButton: false });
+        
+        // Select the new parent
+        setForm((f) => ({ ...f, parentId: newParent.id }));
+        setParentSearch(newParent.name || newParent.username);
+        
+        // Close quick form
+        setQuickParentOpen(false);
+        setQuickParentForm({ name: '', password: '' });
+        
+        // Refresh parents list
+        loadParents();
+      })
+      .catch((err) => {
+        Swal.fire({ icon: 'error', title: 'Error', text: err.message });
+      })
+      .finally(() => setQuickParentLoading(false));
+  };
+
   const renderForm = (onSubmit: (e: React.FormEvent) => void, title: string, showFee = canViewFee) => (
     <form onSubmit={onSubmit} className="space-y-4">
       <div className="grid gap-4 sm:grid-cols-2">
@@ -581,7 +621,16 @@ function StudentsListInner() {
             />
           </div>
           <div className="relative">
-            <label className="mb-1.5 block text-sm font-medium">Parent (user)</label>
+            <div className="mb-1.5 flex items-center justify-between">
+              <label className="block text-sm font-medium">Parent (user)</label>
+              <button
+                type="button"
+                onClick={() => setQuickParentOpen(true)}
+                className="text-[10px] font-black uppercase tracking-widest text-emerald-600 hover:text-emerald-700 underline underline-offset-2"
+              >
+                + Add New Parent
+              </button>
+            </div>
             <input
               value={parentSearch}
               onChange={(e) => {
@@ -865,6 +914,57 @@ function StudentsListInner() {
           <div className="fixed left-1/2 top-1/2 z-50 max-h-[90vh] w-full max-w-2xl -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-xl border bg-card p-6 shadow-xl">
             <h2 className="text-lg font-semibold">Edit student</h2>
             <div className="mt-4">{renderForm(handleUpdate, 'Save')}</div>
+          </div>
+        </>
+      )}
+
+      {quickParentOpen && (
+        <>
+          <div className="fixed inset-0 z-[60] bg-black/40" onClick={() => setQuickParentOpen(false)} aria-hidden="true" />
+          <div className="fixed left-1/2 top-1/2 z-[70] w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-2xl border bg-card p-8 shadow-2xl ring-1 ring-black/5 animate-in fade-in zoom-in duration-200">
+            <div className="mb-6">
+              <h3 className="text-xl font-black tracking-tight text-foreground">Quick Add Parent</h3>
+              <p className="text-xs font-medium text-muted-foreground mt-1">Create a new parent account instantly.</p>
+            </div>
+            <form onSubmit={handleQuickParentCreate} className="space-y-5">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Full Name</label>
+                <input
+                  value={quickParentForm.name}
+                  onChange={(e) => setQuickParentForm((f) => ({ ...f, name: e.target.value }))}
+                  required
+                  placeholder="e.g. John Doe"
+                  className={inputCls + " h-11 rounded-xl bg-muted/30 border-none px-4 font-medium focus-visible:ring-emerald-500"}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Initial Password</label>
+                <input
+                  type="password"
+                  value={quickParentForm.password}
+                  onChange={(e) => setQuickParentForm((f) => ({ ...f, password: e.target.value }))}
+                  required
+                  placeholder="Min. 6 characters"
+                  className={inputCls + " h-11 rounded-xl bg-muted/30 border-none px-4 font-medium focus-visible:ring-emerald-500"}
+                />
+              </div>
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setQuickParentOpen(false)}
+                  className="flex-1 h-12 rounded-xl border border-input bg-background font-bold text-xs uppercase tracking-widest transition-all hover:bg-muted active:scale-95"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={quickParentLoading}
+                  className="flex-1 h-12 rounded-xl bg-emerald-600 font-bold text-xs uppercase tracking-widest text-white shadow-lg shadow-emerald-200 transition-all hover:bg-emerald-700 active:scale-95 disabled:opacity-50"
+                >
+                  {quickParentLoading ? 'Creating...' : 'Create Parent'}
+                </button>
+              </div>
+            </form>
           </div>
         </>
       )}
