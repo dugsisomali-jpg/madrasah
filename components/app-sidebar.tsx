@@ -41,7 +41,7 @@ const navItems: NavItem[] = [
   { href: '/exams', label: 'Exams', icon: FileCheck, permission: 'exams.manage' },
   { href: '/attendance', label: 'Attendance', icon: ClipboardCheck, permission: 'attendance.read' },
   { href: '/user-management', label: 'User Management', icon: Shield, permission: 'users.read' },
-  { href: '/settings', label: 'System Settings', icon: Menu, permission: 'system.manage' },
+  { href: '/settings', label: 'System Settings', icon: Settings2, permission: 'system.manage' },
 ];
 
 function NavLinks({ 
