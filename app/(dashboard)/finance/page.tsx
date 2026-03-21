@@ -58,157 +58,195 @@ export default function FinanceDashboard() {
     );
   }
 
-  const { summary, recent } = stats || { 
+  const { summary, recent } = (stats && !('error' in stats)) ? stats : { 
     summary: { totalIncome: 0, totalSalaries: 0, totalExpenses: 0, netBalance: 0 },
     recent: { receipts: [], salaries: [], expenses: [] }
   };
 
   return (
-    <div className="p-6 space-y-8 max-w-7xl mx-auto">
-      <div className="flex justify-between items-end">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Finance Dashboard</h1>
-          <p className="text-muted-foreground mt-1">Overview of income and expenditures for this month.</p>
+    <div className="p-6 md:p-10 space-y-10 min-h-screen bg-slate-50/50 animate-in fade-in duration-700">
+      {/* Premium Header */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8 pb-8 border-b border-slate-200">
+        <div className="flex items-center gap-5">
+           <div className="h-16 w-16 flex items-center justify-center rounded-[2rem] bg-slate-900 text-white shadow-2xl shadow-slate-900/20">
+              <Landmark className="h-8 w-8" />
+           </div>
+           <div>
+              <h1 className="text-4xl font-black tracking-tighter text-slate-900 uppercase italic leading-none">Institutional Finance</h1>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mt-2">Treasury & Expenditure Analysis</p>
+           </div>
         </div>
-        <div className="flex gap-3">
-          <Button asChild variant="outline">
-            <Link href="/finance/expenses">Manage Expenses</Link>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <Button asChild variant="outline" className="h-14 px-8 rounded-2xl border-slate-200 bg-white font-black uppercase text-[10px] tracking-widest hover:bg-slate-50 transition-all">
+            <Link href="/finance/expenses">
+               <ArrowDownRight className="mr-2 h-4 w-4 text-rose-500" />
+               Expenses
+            </Link>
           </Button>
-          <Button asChild>
-            <Link href="/finance/salaries">Manage Salaries</Link>
+          <Button asChild className="h-14 px-8 rounded-2xl bg-slate-900 font-black uppercase text-[10px] tracking-widest shadow-xl shadow-slate-900/20 hover:scale-105 transition-all">
+            <Link href="/finance/payroll">
+               <Users className="mr-2 h-4 w-4 text-emerald-400" />
+               Payroll
+            </Link>
           </Button>
         </div>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="relative overflow-hidden border-none bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 dark:from-emerald-500/20 dark:to-emerald-500/10">
+      {/* Modern Summary Cards */}
+      <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+        <Card className="rounded-[3rem] border-none bg-white shadow-sm hover:shadow-2xl transition-all group overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Total Income</CardTitle>
-            <ArrowUpRight className="h-4 w-4 text-emerald-500" />
+            <CardTitle className="text-[10px] font-black uppercase tracking-widest text-slate-400">Total Income</CardTitle>
+            <div className="h-8 w-8 rounded-xl bg-emerald-50 flex items-center justify-center group-hover:bg-emerald-500 transition-colors duration-500">
+               <ArrowUpRight className="h-4 w-4 text-emerald-500 group-hover:text-white transition-colors duration-500" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-emerald-600 dark:text-emerald-400">
-              ${summary.totalIncome.toLocaleString()}
+            <div className="text-4xl font-black tracking-tighter text-slate-900">
+              {Number(summary.totalIncome || 0).toLocaleString()} <span className="text-xs font-black opacity-30">KES</span>
             </div>
-            <p className="text-xs text-muted-foreground mt-1">From student fee receipts</p>
+            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-2">Student Fee Collections</p>
           </CardContent>
         </Card>
 
-        <Card className="relative overflow-hidden border-none bg-gradient-to-br from-orange-500/10 to-orange-500/5 dark:from-orange-500/20 dark:to-orange-500/10">
+        <Card className="rounded-[3rem] border-none bg-white shadow-sm hover:shadow-2xl transition-all group overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Salaries Paid</CardTitle>
-            <ArrowDownRight className="h-4 w-4 text-orange-500" />
+            <CardTitle className="text-[10px] font-black uppercase tracking-widest text-slate-400">Payroll Cost</CardTitle>
+            <div className="h-8 w-8 rounded-xl bg-orange-50 flex items-center justify-center group-hover:bg-orange-500 transition-colors duration-500">
+               <ArrowDownRight className="h-4 w-4 text-orange-500 group-hover:text-white transition-colors duration-500" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-orange-600 dark:text-orange-400">
-              ${summary.totalSalaries.toLocaleString()}
+            <div className="text-4xl font-black tracking-tighter text-slate-900">
+              {Number(summary.totalSalaries || 0).toLocaleString()} <span className="text-xs font-black opacity-30">KES</span>
             </div>
-            <p className="text-xs text-muted-foreground mt-1">To staff and teachers</p>
+            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-2">Staff Remuneration</p>
           </CardContent>
         </Card>
 
-        <Card className="relative overflow-hidden border-none bg-gradient-to-br from-rose-500/10 to-rose-500/5 dark:from-rose-500/20 dark:to-rose-500/10">
+        <Card className="rounded-[3rem] border-none bg-white shadow-sm hover:shadow-2xl transition-all group overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Other Expenses</CardTitle>
-            <ArrowDownRight className="h-4 w-4 text-rose-500" />
+            <CardTitle className="text-[10px] font-black uppercase tracking-widest text-slate-400">Operating Expenses</CardTitle>
+            <div className="h-8 w-8 rounded-xl bg-rose-50 flex items-center justify-center group-hover:bg-rose-500 transition-colors duration-500">
+               <ArrowDownRight className="h-4 w-4 text-rose-500 group-hover:text-white transition-colors duration-500" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-rose-600 dark:text-rose-400">
-              ${summary.totalExpenses.toLocaleString()}
+            <div className="text-4xl font-black tracking-tighter text-slate-900">
+              {Number(summary.totalExpenses || 0).toLocaleString()} <span className="text-xs font-black opacity-30">KES</span>
             </div>
-            <p className="text-xs text-muted-foreground mt-1">Operational costs</p>
+            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-2">Operational Overheads</p>
           </CardContent>
         </Card>
 
-        <Card className="relative overflow-hidden border-none bg-primary/10 dark:bg-primary/20">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Net Balance</CardTitle>
-            <Wallet className="h-4 w-4 text-primary" />
+        <Card className="rounded-[3rem] border-none bg-slate-900 text-white shadow-2xl shadow-slate-900/30 overflow-hidden relative group">
+          <div className="absolute top-0 right-0 p-8 opacity-10 scale-150 rotate-12 group-hover:scale-110 transition-transform">
+             <Wallet className="size-20" />
+          </div>
+          <CardHeader className="flex flex-row items-center justify-between pb-2 relative">
+            <CardTitle className="text-[10px] font-black uppercase tracking-widest text-slate-400">Net Treasury</CardTitle>
+            <Landmark className="h-4 w-4 text-slate-500" />
           </CardHeader>
-          <CardContent>
-            <div className={`text-3xl font-bold ${summary.netBalance >= 0 ? 'text-primary' : 'text-rose-600'}`}>
-              ${summary.netBalance.toLocaleString()}
+          <CardContent className="relative">
+            <div className={`text-4xl font-black tracking-tighter ${summary.netBalance >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+              {Number(summary.netBalance || 0).toLocaleString()} <span className="text-xs font-black opacity-40">KES</span>
             </div>
-            <p className="text-xs text-muted-foreground mt-1">Profit/Loss for current month</p>
+            <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mt-2">Current Fiscal Status</p>
           </CardContent>
         </Card>
-      </div>
+      </section>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Recent Income */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+        {/* Recent Ledger - Income */}
+        <Card className="rounded-[3rem] border-none shadow-xl shadow-slate-200/50 overflow-hidden bg-white">
+          <CardHeader className="p-8 border-b border-slate-50 flex flex-row items-center justify-between bg-emerald-500/5">
             <div>
-              <CardTitle>Recent Income</CardTitle>
-              <p className="text-sm text-muted-foreground">Latest student fee payments</p>
+              <CardTitle className="text-lg font-black tracking-tight text-slate-900 uppercase italic">Recent Revenue</CardTitle>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Student Tuition Receipts</p>
             </div>
-            <Receipt className="h-5 w-5 text-muted-foreground" />
+            <div className="h-10 w-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-lg shadow-emerald-500/20">
+               <Receipt className="size-5" />
+            </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-0">
             <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Student</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
+              <TableHeader className="bg-slate-50/30">
+                <TableRow className="border-none">
+                  <TableHead className="py-4 px-8 text-[10px] font-black uppercase tracking-widest text-slate-400">Source</TableHead>
+                  <TableHead className="py-4 px-8 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">Amount</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {recent.receipts.length === 0 ? (
-                  <TableRow><TableCell colSpan={3} className="text-center py-8 text-muted-foreground">No recent receipts</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={2} className="text-center py-20 text-slate-300 font-black uppercase text-[10px] tracking-widest opacity-30">No Transactions Detected</TableCell></TableRow>
                 ) : (
-                  recent.receipts.map((r) => (
-                    <TableRow key={r.id}>
-                      <TableCell className="font-medium">{r.Payment?.Student?.name || 'Unknown'}</TableCell>
-                      <TableCell className="text-sm">{new Date(r.date).toLocaleDateString()}</TableCell>
-                      <TableCell className="text-right font-semibold text-emerald-600">${Number(r.amount).toLocaleString()}</TableCell>
+                  recent.receipts.map((r: any) => (
+                    <TableRow key={r.id} className="group hover:bg-slate-50/50 transition-colors border-none">
+                      <TableCell className="py-6 px-8">
+                         <p className="font-black text-slate-900 text-xs">{r.Payment?.Student?.name || 'Unknown Payer'}</p>
+                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">{new Date(r.date).toLocaleDateString()}</p>
+                      </TableCell>
+                      <TableCell className="py-6 px-8 text-right">
+                         <span className="text-sm font-black text-emerald-600">KES {Number(r.amount || 0).toLocaleString()}</span>
+                      </TableCell>
                     </TableRow>
                   ))
                 )}
               </TableBody>
             </Table>
-            <Button variant="ghost" className="w-full mt-4 text-primary" asChild>
-              <Link href="/receipts">View All Receipts</Link>
-            </Button>
+            <div className="p-4 bg-slate-50/50">
+               <Button variant="ghost" className="w-full h-12 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-white" asChild>
+                  <Link href="/receipts">View Full Receipts Ledger</Link>
+               </Button>
+            </div>
           </CardContent>
         </Card>
 
-        {/* Recent Salaries */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
+        {/* Recent Ledger - Payroll */}
+        <Card className="rounded-[3rem] border-none shadow-xl shadow-slate-200/50 overflow-hidden bg-white">
+          <CardHeader className="p-8 border-b border-slate-50 flex flex-row items-center justify-between bg-orange-500/5">
             <div>
-              <CardTitle>Recent Salaries</CardTitle>
-              <p className="text-sm text-muted-foreground">Latest staff salary payments</p>
+              <CardTitle className="text-lg font-black tracking-tight text-slate-900 uppercase italic">Recent Payroll</CardTitle>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Staff Remuneration Logs</p>
             </div>
-            <Users className="h-5 w-5 text-muted-foreground" />
+            <div className="h-10 w-10 rounded-xl bg-orange-500 text-white flex items-center justify-center shadow-lg shadow-orange-500/20">
+               <Users className="size-5" />
+            </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-0">
             <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Employee</TableHead>
-                  <TableHead>Month/Year</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
+              <TableHeader className="bg-slate-50/30">
+                <TableRow className="border-none">
+                  <TableHead className="py-4 px-8 text-[10px] font-black uppercase tracking-widest text-slate-400">Personnel</TableHead>
+                  <TableHead className="py-4 px-8 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">Settled</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {recent.salaries.length === 0 ? (
-                  <TableRow><TableCell colSpan={3} className="text-center py-8 text-muted-foreground">No recent salary payments</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={2} className="text-center py-20 text-slate-300 font-black uppercase text-[10px] tracking-widest opacity-30">No Payroll History</TableCell></TableRow>
                 ) : (
-                  recent.salaries.map((s) => (
-                    <TableRow key={s.id}>
-                      <TableCell className="font-medium">{s.employee?.name || 'Unknown'}</TableCell>
-                      <TableCell className="text-sm">{s.month}/{s.year}</TableCell>
-                      <TableCell className="text-right font-semibold text-orange-600">${Number(s.amount).toLocaleString()}</TableCell>
+                  recent.salaries.map((s: any) => (
+                    <TableRow key={s.id} className="group hover:bg-slate-50/50 transition-colors border-none">
+                      <TableCell className="py-6 px-8">
+                         <p className="font-black text-slate-900 text-xs">{s.employee?.name || 'Staff Member'}</p>
+                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+                            {new Date(2000, (s.month || 1) - 1).toLocaleString('default', { month: 'short' })} {s.year}
+                         </p>
+                      </TableCell>
+                      <TableCell className="py-6 px-8 text-right">
+                         <span className="text-sm font-black text-orange-600">KES {Number(s.amount || 0).toLocaleString()}</span>
+                      </TableCell>
                     </TableRow>
                   ))
                 )}
               </TableBody>
             </Table>
-            <Button variant="ghost" className="w-full mt-4 text-primary" asChild>
-              <Link href="/finance/salaries">Manage Salaries</Link>
-            </Button>
+            <div className="p-4 bg-slate-50/50">
+               <Button variant="ghost" className="w-full h-12 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-white" asChild>
+                  <Link href="/finance/payroll">Manage Personnel Payroll</Link>
+               </Button>
+            </div>
           </CardContent>
         </Card>
       </div>

@@ -221,19 +221,38 @@ export function ParentDashboard() {
            </div>
         </div>
 
-        {/* Horizontal Student List */}
-        <div className="flex flex-wrap lg:flex-nowrap gap-2 p-2 bg-slate-100/50 rounded-[2rem] border border-slate-100">
+        {/* Visual Student Selector */}
+        <div className="flex flex-wrap gap-4 p-3 bg-white/40 backdrop-blur-md rounded-[2.5rem] border border-white/60 shadow-xl shadow-slate-200/20">
           {children.map((child) => (
             <button
               key={child.id}
               onClick={() => setSelectedId(child.id)}
-              className={`px-6 py-3 rounded-[1.5rem] text-sm font-bold transition-all ${
+              className={`group flex items-center gap-3 pl-2 pr-6 py-2 rounded-[2rem] transition-all duration-500 ${
                 selectedId === child.id 
-                  ? 'bg-white text-slate-900 shadow-xl shadow-slate-200/50 scale-105'
-                  : 'text-slate-400 hover:text-slate-600 hover:bg-white/50'
+                  ? 'bg-slate-900 text-white shadow-2xl shadow-slate-900/40 scale-105'
+                  : 'bg-white/60 text-slate-500 hover:bg-white hover:text-slate-900 hover:shadow-lg'
               }`}
             >
-              {child.name.split(' ')[0]}
+              <div className={`h-10 w-10 rounded-full overflow-hidden border-2 transition-transform duration-500 group-hover:scale-110 ${
+                selectedId === child.id ? 'border-white/20' : 'border-slate-100'
+              }`}>
+                {child.imagePath && urlEndpoint ? (
+                  <Image
+                    src={child.imagePath.startsWith('/') ? child.imagePath : `/${child.imagePath}`}
+                    width={40}
+                    height={40}
+                    alt={child.name}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <div className={`h-full w-full flex items-center justify-center font-black text-xs ${
+                    selectedId === child.id ? 'bg-slate-800 text-slate-400' : 'bg-slate-50 text-slate-300'
+                  }`}>
+                    {child.name.charAt(0)}
+                  </div>
+                )}
+              </div>
+              <span className="text-xs font-black uppercase tracking-widest">{child.name.split(' ')[0]}</span>
             </button>
           ))}
         </div>
