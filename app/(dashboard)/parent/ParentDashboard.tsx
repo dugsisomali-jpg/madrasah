@@ -1,3 +1,5 @@
+'use client';
+
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { 
   BookOpen, 
@@ -289,20 +291,20 @@ export function ParentDashboard() {
              <p className="text-xs font-black text-slate-400 uppercase tracking-widest animate-pulse">Synchronizing Data...</p>
           </div>
         ) : (
-          <Tabs defaultValue="memorization" className="w-full">
+          <Tabs defaultValue="attendance" className="w-full">
             <div className="px-8 pt-8 border-b border-slate-50">
               <TabsList className="flex h-auto p-1 bg-slate-100 rounded-2xl gap-1">
+                <TabsTrigger value="attendance" className="flex-1 py-4 rounded-xl text-xs font-black uppercase tracking-widest data-[state=active]:bg-white data-[state=active]:shadow-lg">
+                  <ClipboardCheck className="size-4 mr-2" /> Attendance
+                </TabsTrigger>
                 <TabsTrigger value="memorization" className="flex-1 py-4 rounded-xl text-xs font-black uppercase tracking-widest data-[state=active]:bg-white data-[state=active]:shadow-lg">
                   <BookOpen className="size-4 mr-2" /> Memorization
                 </TabsTrigger>
                 <TabsTrigger value="exams" className="flex-1 py-4 rounded-xl text-xs font-black uppercase tracking-widest data-[state=active]:bg-white data-[state=active]:shadow-lg">
                   <FileCheck className="size-4 mr-2" /> Exams
                 </TabsTrigger>
-                <TabsTrigger value="attendance" className="flex-1 py-4 rounded-xl text-xs font-black uppercase tracking-widest data-[state=active]:bg-white data-[state=active]:shadow-lg">
-                  <ClipboardCheck className="size-4 mr-2" /> Attendance
-                </TabsTrigger>
                 <TabsTrigger value="fees" className="flex-1 py-4 rounded-xl text-xs font-black uppercase tracking-widest data-[state=active]:bg-white data-[state=active]:shadow-lg">
-                  <Banknote className="size-4 mr-2" /> Fees
+                  <Banknote className="size-4 mr-2" /> Fee
                 </TabsTrigger>
               </TabsList>
             </div>

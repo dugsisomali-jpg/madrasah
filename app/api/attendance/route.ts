@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { AttendanceStatus } from '@prisma/client';
-import { hasPermission, shouldFilterMemorizationByTeacher } from '@/lib/auth-utils';
+import { hasPermission, shouldFilterMemorizationByTeacher, isParentRole } from '@/lib/auth-utils';
 
 export async function GET(request: Request) {
   const session = await getServerSession(authOptions);
