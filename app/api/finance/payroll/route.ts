@@ -2,10 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { hasPermission } from '@/lib/auth-utils';
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const canRead = await hasPermission(session.user.id, 'hr.read') || await hasPermission(session.user.id, 'hr.manage');
+  if (!canRead) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const { searchParams } = new URL(req.url);
   const employeeId = searchParams.get('employeeId');
@@ -25,15 +29,16 @@ export async function GET(req: NextRequest) {
           select: {
             name: true,
             jobRole: true,
+            basicSalary: true,
           }
         }
       },
-      orderBy: { paymentDate: 'desc' },
+      orderBy: { createdAt: 'desc' },
     });
 
     return NextResponse.json(payments);
   } catch (error) {
-    console.error('[SALARY_PAYMENTS_GET]', error);
+    console.error('[PAYROLL_GET]', error);
     return NextResponse.json({ error: 'Internal Error' }, { status: 500 });
   }
 }
@@ -42,9 +47,24 @@ export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+  const canManage = await hasPermission(session.user.id, 'hr.manage');
+  if (!canManage) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+
   try {
     const body = await req.json();
-    const { employeeId, amount, month, year, paymentDate, paymentMethod, reference, notes } = body;
+    const { 
+      employeeId, 
+      amount, 
+      loanDeduction, 
+      advanceDeduction, 
+      netSalary, 
+      month, 
+      year, 
+      paymentDate, 
+      paymentMethod, 
+      reference, 
+      notes 
+    } = body;
 
     if (!employeeId || !amount || !month || !year || !paymentDate) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -54,6 +74,9 @@ export async function POST(req: NextRequest) {
       data: {
         employeeId,
         amount: parseFloat(amount),
+        loanDeduction: parseFloat(loanDeduction || 0),
+        advanceDeduction: parseFloat(advanceDeduction || 0),
+        netSalary: parseFloat(netSalary || amount),
         month: parseInt(month),
         year: parseInt(year),
         paymentDate: new Date(paymentDate),
@@ -61,19 +84,14 @@ export async function POST(req: NextRequest) {
         reference,
         notes,
       },
-      include: {
-        employee: {
-          select: {
-            name: true,
-            jobRole: true,
-          }
-        }
-      }
     });
+
+    // If there were deductions, we might want to update loan balance or advance status
+    // For now, keep it simple. Logic for auto-updating balances can be added here or in a separate transaction.
 
     return NextResponse.json(payment);
   } catch (error) {
-    console.error('[SALARY_PAYMENTS_POST]', error);
+    console.error('[PAYROLL_POST]', error);
     return NextResponse.json({ error: 'Internal Error' }, { status: 500 });
   }
 }
@@ -81,6 +99,9 @@ export async function POST(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const canManage = await hasPermission(session.user.id, 'hr.manage');
+  if (!canManage) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   try {
     const { searchParams } = new URL(req.url);
@@ -90,7 +111,7 @@ export async function DELETE(req: NextRequest) {
     await prisma.salaryPayment.delete({ where: { id } });
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('[SALARY_PAYMENTS_DELETE]', error);
+    console.error('[PAYROLL_DELETE]', error);
     return NextResponse.json({ error: 'Internal Error' }, { status: 500 });
   }
 }

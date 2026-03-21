@@ -9,23 +9,50 @@ export async function GET(request: Request) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const canRead = await hasPermission(session.user.id, 'attendance.read');
-  if (!canRead) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-
   const { searchParams } = new URL(request.url);
   const dateStr = searchParams.get('date');
-  if (!dateStr) return NextResponse.json({ error: 'Date is required' }, { status: 400 });
-
-  const date = new Date(dateStr);
+  const studentId = searchParams.get('studentId');
 
   try {
     const isTeacher = await shouldFilterMemorizationByTeacher(session.user.id);
-    
-    let where: any = { date: { equals: date } };
-    
-    // If user is a teacher (not an admin), only show their students
-    if (isTeacher) {
-      where.Student = { teacherId: session.user.id };
+    const isParent = await isParentRole(session.user.id);
+    const canReadGlobal = await hasPermission(session.user.id, 'attendance.read');
+
+    let where: any = {};
+
+    if (studentId) {
+      // If fetching for a specific student, check permission
+      if (!canReadGlobal) {
+        if (isParent) {
+          // Verify this is the parent's child
+          const student = await prisma.student.findUnique({
+            where: { id: studentId, parentId: session.user.id }
+          });
+          if (!student) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+        } else if (isTeacher) {
+          // Verify this is the teacher's student
+          const student = await prisma.student.findUnique({
+            where: { id: studentId, teacherId: session.user.id }
+          });
+          if (!student) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+        } else {
+          return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+        }
+      }
+      where.studentId = studentId;
+      if (dateStr) where.date = new Date(dateStr);
+    } else {
+      // General view (requires global read or teacher role)
+      if (!canReadGlobal && !isTeacher) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
+      
+      if (!dateStr) return NextResponse.json({ error: 'Date is required' }, { status: 400 });
+      where.date = new Date(dateStr);
+
+      if (isTeacher && !canReadGlobal) {
+        where.Student = { teacherId: session.user.id };
+      }
     }
 
     const attendance = await prisma.attendance.findMany({
@@ -37,7 +64,8 @@ export async function GET(request: Request) {
             teacherId: true
           }
         }
-      }
+      },
+      orderBy: { date: 'desc' }
     });
     return NextResponse.json(attendance);
   } catch (error) {

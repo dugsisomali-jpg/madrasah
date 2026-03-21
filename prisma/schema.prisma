@@ -42,6 +42,8 @@ model Employee {
   user             User?                @relation("EmployeeUser", fields: [userId], references: [id], onDelete: SetNull)
   salaryPayments   SalaryPayment[]
   attendance       EmployeeAttendance[]
+  loans            Loan[]
+  advances         SalaryAdvance[]
   createdAt        DateTime             @default(now())
   updatedAt        DateTime             @updatedAt
 }
@@ -55,21 +57,84 @@ enum EmployeeStatus {
 // Removed: SalaryComponent, SalaryTemplate, SalaryComponentAmount, EmployeeSalary
 
 model SalaryPayment {
+  id                String        @id @default(cuid())
+  employeeId        String
+  amount            Decimal       @db.Decimal(10, 2) // Basic + Allowances
+  loanDeduction     Decimal       @db.Decimal(10, 2) @default(0)
+  advanceDeduction  Decimal       @db.Decimal(10, 2) @default(0)
+  netSalary         Decimal       @db.Decimal(10, 2)
+  month             Int
+  year              Int
+  paymentDate       DateTime      @db.Date
+  paymentMethod     String?       @default("CASH") // CASH, BANK_TRANSFER, MPESA
+  reference         String?
+  notes             String?
+  employee          Employee      @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  @@index([employeeId])
+  @@index([year, month])
+}
+
+model Loan {
+  id                 String          @id @default(cuid())
+  employeeId         String
+  amount             Decimal         @db.Decimal(10, 2)
+  interestRate       Decimal         @db.Decimal(5, 2) @default(0)
+  tenorMonths        Int
+  monthlyInstallment Decimal         @db.Decimal(10, 2)
+  remainingBalance   Decimal         @db.Decimal(10, 2)
+  startDate          DateTime        @db.Date
+  status             LoanStatus      @default(ACTIVE)
+  notes              String?
+  employee           Employee        @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  repayments         LoanRepayment[]
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+
+  @@index([employeeId])
+}
+
+model LoanRepayment {
+  id              String        @id @default(cuid())
+  loanId          String
+  amount          Decimal       @db.Decimal(10, 2)
+  date            DateTime      @db.Date
+  notes           String?
+  loan            Loan          @relation(fields: [loanId], references: [id], onDelete: Cascade)
+  createdAt       DateTime      @default(now())
+
+  @@index([loanId])
+}
+
+model SalaryAdvance {
   id             String        @id @default(cuid())
   employeeId     String
   amount         Decimal       @db.Decimal(10, 2)
-  month          Int
-  year           Int
-  paymentDate    DateTime      @db.Date
-  paymentMethod  String?       @default("CASH") // CASH, BANK_TRANSFER, MPESA
-  reference      String?
+  date           DateTime      @db.Date
+  status         AdvanceStatus @default(PENDING)
+  deductionMonth Int?
+  deductionYear  Int?
   notes          String?
   employee       Employee      @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 
   @@index([employeeId])
-  @@index([year, month])
+}
+
+enum LoanStatus {
+  ACTIVE
+  CLOSED
+}
+
+enum AdvanceStatus {
+  PENDING
+  APPROVED
+  PAID
+  DEDUCTED
+  REJECTED
 }
 
 model EmployeeAttendance {
